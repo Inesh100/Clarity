@@ -5,7 +5,7 @@ import '../firebase_options.dart';
 class AppInitializer {
   static Future<void> initialize() async {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-    // Enable Firestore persistence for offline caching
+    // Enable offline persistence for Firestore
     FirebaseFirestore.instance.settings = const Settings(persistenceEnabled: true);
   }
 }

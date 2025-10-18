@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../repositories/auth_repository.dart';
 import '../repositories/user_repository.dart';
-import '../models/user_model.dart';
+import '../models/app_user.dart';
 
 class AuthViewModel extends ChangeNotifier {
   final _repo = AuthRepository();

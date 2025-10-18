@@ -13,8 +13,7 @@ class MedicineViewModel extends ChangeNotifier {
     final id = const Uuid().v4();
     final m = Medicine(id: id, userId: userId, name: name, dosage: dosage, hour: hour, minute: minute);
     await _repo.addMedicine(m);
-    // schedule daily local notification
-    await NotificationService.scheduleDaily(id: id, title: 'Medicine: $name', body: '$dosage', hour: hour, minute: minute);
+    await NotificationService.scheduleDaily(id: id, title: 'Medicine: $name', body: dosage, hour: hour, minute: minute);
   }
 
   Future<void> deleteMedicine(String id) async {

@@ -1,8 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/flashcard_model.dart';
+import '../core/constants.dart';
 
 class FlashcardRepository {
-  final _col = FirebaseFirestore.instance.collection('flashcards');
+  final _col = FirebaseFirestore.instance.collection(Collections.flashcards);
 
   Future<void> addCard(Flashcard c) => _col.doc(c.id).set(c.toMap());
   Stream<List<Flashcard>> getCards(String uid) =>

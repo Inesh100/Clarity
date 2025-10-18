@@ -4,7 +4,6 @@ import '../providers/app_state.dart';
 
 class CommonNavBar extends StatelessWidget {
   const CommonNavBar({super.key});
-
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);

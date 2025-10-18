@@ -33,7 +33,6 @@ Future<void> main() async {
 
 class ClarityApp extends StatelessWidget {
   const ClarityApp({super.key});
-
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);

@@ -1,8 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/journal_entry_model.dart';
+import '../core/constants.dart';
 
 class JournalRepository {
-  final _col = FirebaseFirestore.instance.collection('journal_entries');
+  final _col = FirebaseFirestore.instance.collection(Collections.journalEntries);
 
   Future<void> addEntry(JournalEntry e) => _col.doc(e.id).set(e.toMap());
 

@@ -1,8 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/reminder_model.dart';
+import '../core/constants.dart';
 
 class ReminderRepository {
-  final _col = FirebaseFirestore.instance.collection('reminders');
+  final _col = FirebaseFirestore.instance.collection(Collections.reminders);
 
   Future<void> addReminder(ReminderModel r) => _col.doc(r.id).set(r.toMap());
   Stream<List<ReminderModel>> getRemindersForUser(String uid) {

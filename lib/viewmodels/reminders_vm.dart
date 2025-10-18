@@ -14,20 +14,18 @@ class RemindersViewModel extends ChangeNotifier {
     required String title,
     required String message,
     required DateTime dateTime,
-    required String repeat, // none,daily,weekly,monthly
+    required String repeat,
     int? weekday,
   }) async {
     final id = const Uuid().v4();
     final r = ReminderModel(id: id, userId: userId, title: title, message: message, dateTime: dateTime, repeat: repeat, weekday: weekday);
     await _repo.addReminder(r);
 
-    // schedule local notification
     if (repeat == 'daily') {
       await NotificationService.scheduleDaily(id: id, title: title, body: message, hour: dateTime.hour, minute: dateTime.minute);
     } else if (repeat == 'weekly' && weekday != null) {
       await NotificationService.scheduleWeekly(id: id, title: title, body: message, weekday: weekday, hour: dateTime.hour, minute: dateTime.minute);
     } else {
-      // one-off: schedule for the date/time selected (approx using daily scheduler for same time/day)
       await NotificationService.scheduleDaily(id: id, title: title, body: message, hour: dateTime.hour, minute: dateTime.minute);
     }
   }

@@ -38,7 +38,6 @@ class _MedicinePageState extends State<MedicinePage> {
             }, child: const Text('Pick time')),
           ]),
           ElevatedButton(onPressed: () {
-            if (uid == null) return;
             vm.addMedicine(userId: uid, name: nameCtrl.text, dosage: dosageCtrl.text, hour: time.hour, minute: time.minute);
             nameCtrl.clear(); dosageCtrl.clear();
           }, child: const Text('Add medicine')),

@@ -4,8 +4,8 @@ class ReminderModel {
   final String title;
   final String message;
   final DateTime dateTime;
-  final String repeat; // none,daily,weekly,monthly
-  final int? weekday; // for weekly: 1..7
+  final String repeat;
+  final int? weekday;
 
   ReminderModel({
     required this.id,

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/user_model.dart';
+import '../models/app_user.dart';
 import '../repositories/user_repository.dart';
 
 class ProfileViewModel extends ChangeNotifier {

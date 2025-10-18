@@ -47,7 +47,7 @@ class _RemindersPageState extends State<RemindersPage> {
           ]),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            value: repeat,
+            initialValue: repeat,
             items: const [
               DropdownMenuItem(value: 'none', child: Text('No repeat')),
               DropdownMenuItem(value: 'daily', child: Text('Daily')),
@@ -63,7 +63,6 @@ class _RemindersPageState extends State<RemindersPage> {
           ),
           const SizedBox(height: 8),
           ElevatedButton(onPressed: () {
-            if (uid == null) return;
             vm.addReminder(userId: uid, title: titleCtrl.text, message: messageCtrl.text, dateTime: selected, repeat: repeat, weekday: weekday);
             titleCtrl.clear(); messageCtrl.clear();
           }, child: const Text('Save reminder')),

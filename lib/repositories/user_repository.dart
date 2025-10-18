@@ -1,8 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/user_model.dart';
+import '../models/app_user.dart';
+import '../core/constants.dart';
 
 class UserRepository {
-  final _col = FirebaseFirestore.instance.collection('users');
+  final _col = FirebaseFirestore.instance.collection(Collections.users);
 
   Future<void> createUser(AppUser user) => _col.doc(user.id).set(user.toMap());
   Future<AppUser?> getUser(String id) async {

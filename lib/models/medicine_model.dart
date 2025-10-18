@@ -6,14 +6,7 @@ class Medicine {
   final int hour;
   final int minute;
 
-  Medicine({
-    required this.id,
-    required this.userId,
-    required this.name,
-    required this.dosage,
-    required this.hour,
-    required this.minute,
-  });
+  Medicine({ required this.id, required this.userId, required this.name, required this.dosage, required this.hour, required this.minute });
 
   Map<String, dynamic> toMap() => {
     'id': id,
