@@ -7,12 +7,12 @@ plugins {
 
 android {
     namespace "com.example.clarity"
-    compileSdk 34
+    compileSdk 36
 
     defaultConfig {
         applicationId "com.example.clarity"
         minSdk flutter.minSdkVersion
-        targetSdk 34
+        targetSdk 36
         versionCode 1
         versionName "1.0"
         multiDexEnabled true
@@ -20,7 +20,7 @@ android {
 
     buildTypes {
         release {
-            // You can set up your real signing config later
+            
             signingConfig signingConfigs.debug
         }
     }
@@ -41,9 +41,10 @@ flutter {
 }
 
 dependencies {
-    // Core library desugaring for newer Java APIs (required by flutter_local_notifications)
-    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
+    
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.23"
     implementation 'androidx.multidex:multidex:2.0.1'
 }
+
