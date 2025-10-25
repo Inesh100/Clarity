@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 //import 'package:firebase_auth/firebase_auth.dart';
 import 'core/app_router.dart';
 import 'core/app_initializer.dart';
+import 'core/notification_service.dart';
 import 'styles/app_theme.dart';
 import 'viewmodels/auth_vm.dart';
 import 'viewmodels/medicine_vm.dart';
@@ -15,6 +16,9 @@ import 'providers/app_state.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppInitializer.initialize();
+  await NotificationService.initialize();
+  
+
 
   runApp(MultiProvider(
     providers: [
@@ -28,6 +32,7 @@ Future<void> main() async {
     ],
     child: const ClarityApp(),
   ));
+  
 }
 
 class ClarityApp extends StatelessWidget {
