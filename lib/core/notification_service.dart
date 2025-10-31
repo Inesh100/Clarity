@@ -20,6 +20,7 @@ class NotificationService {
       settings,
       onDidReceiveNotificationResponse: (resp) {},
     );
+    
   }
 
   /// Configure timezone using flutter_timezone 5.0.0

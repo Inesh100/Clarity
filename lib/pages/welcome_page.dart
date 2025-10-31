@@ -17,12 +17,16 @@ class WelcomePage extends StatelessWidget {
     final appState = Provider.of<AppState>(context);
     final theme = Theme.of(context);
 
+
+    final authVM = context.watch<AuthViewModel>();
+    final name = authVM.appUser?.name ?? 'User';
+
     return Scaffold(
       backgroundColor: appState.isDarkMode
-        ? theme.colorScheme.surfaceContainerHighest
-        : theme.colorScheme.surface,
+          ? theme.colorScheme.surfaceContainerHighest
+          : theme.colorScheme.surface,
       appBar: AppBar(
-        title: const Text('Welcome'),
+        title: Text('Welcome, $name'),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -41,7 +45,6 @@ class WelcomePage extends StatelessWidget {
         ],
       ),
 
-      // 🌟 Body content
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
@@ -56,7 +59,6 @@ class WelcomePage extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // 🔘 Navigation buttons with icons and animation
             Expanded(
               child: GridView.count(
                 crossAxisCount: 2,
@@ -84,13 +86,10 @@ class WelcomePage extends StatelessWidget {
           ],
         ),
       ),
-
-      // 🌈 Bottom Navigation Bar
       bottomNavigationBar: const CommonNavBar(),
     );
   }
 
-  // Helper method for building nav buttons with nice animations
   Widget _buildNavButton(
       BuildContext context, String label, IconData icon, Widget targetPage) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -104,7 +103,6 @@ class WelcomePage extends StatelessWidget {
         elevation: 2,
       ),
       onPressed: () {
-        // Animate page transition
         Navigator.push(
           context,
           PageRouteBuilder(
