@@ -54,6 +54,18 @@ class ProfilePage extends StatelessWidget {
                           textStyle: const TextStyle(fontSize: 16),
                         ),
                       ),
+                      const SizedBox(height: 16),
+ElevatedButton.icon(
+  onPressed: () {
+    Navigator.pushNamed(context, '/about'); // Navigate to CreditsPage
+  },
+  icon: const Icon(Icons.info_outline),
+  label: const Text('Credits'),
+  style: ElevatedButton.styleFrom(
+    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+    textStyle: const TextStyle(fontSize: 16),
+  ),
+),
                     ],
                   ),
                 ),

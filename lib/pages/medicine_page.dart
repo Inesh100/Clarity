@@ -5,6 +5,7 @@ import '../viewmodels/auth_vm.dart';
 import '../models/medicine_model.dart';
 import '../styles/app_text.dart';
 import '../widgets/common_navbar.dart';
+import '../core/notification_service.dart';
 
 class MedicinePage extends StatefulWidget {
   const MedicinePage({super.key});
@@ -17,13 +18,9 @@ class _MedicinePageState extends State<MedicinePage> {
   final nameCtrl = TextEditingController();
   final dosageCtrl = TextEditingController();
   TimeOfDay time = TimeOfDay.now();
-  late Stream<List<Medicine>> _medicinesStream; // store the stream once
-
-  @override
-  void initState() {
-    super.initState();
-    // we can't get uid yet, so we'll initialize the stream in didChangeDependencies
-  }
+  String repeat = 'none';
+  int? weekday;
+  late Stream<List<Medicine>> _medicinesStream;
 
   @override
   void didChangeDependencies() {
@@ -33,6 +30,60 @@ class _MedicinePageState extends State<MedicinePage> {
     final uid = authVm.firebaseUser?.uid;
     if (uid != null) {
       _medicinesStream = vm.streamMedicines(uid);
+    }
+  }
+
+  void _scheduleNotification(String uid, String name, String dosage) {
+    DateTime scheduledTime = DateTime(
+      DateTime.now().year,
+      DateTime.now().month,
+      DateTime.now().day,
+      time.hour,
+      time.minute,
+    );
+
+    // If one-time and time has passed, schedule for tomorrow
+    if (repeat == 'none' && scheduledTime.isBefore(DateTime.now())) {
+      scheduledTime = scheduledTime.add(const Duration(days: 1));
+    }
+
+    // Unique notification ID
+    final notificationId = '${uid}_$name${time.hour}_${time.minute}';
+
+    switch (repeat) {
+      case 'none':
+        // One-time notification
+        NotificationService.scheduleOneTime(
+          id: notificationId,
+          title: 'Medicine Reminder',
+          body: 'Time to take $name — $dosage',
+          dateTime: scheduledTime,
+        );
+        break;
+      case 'daily':
+        NotificationService.scheduleDaily(
+          id: notificationId,
+          title: 'Medicine Reminder',
+          body: 'Time to take $name — $dosage',
+          hour: time.hour,
+          minute: time.minute,
+        );
+        break;
+      case 'weekly':
+        if (weekday != null) {
+          NotificationService.scheduleWeekly(
+            id: notificationId,
+            title: 'Medicine Reminder',
+            body: 'Time to take $name — $dosage',
+            weekday: weekday!,
+            hour: time.hour,
+            minute: time.minute,
+          );
+        }
+        break;
+      case 'monthly':
+        // Optional: Implement monthly scheduling if needed
+        break;
     }
   }
 
@@ -51,67 +102,111 @@ class _MedicinePageState extends State<MedicinePage> {
               child: Column(
                 children: [
                   TextField(
-                      controller: nameCtrl,
-                      decoration:
-                          const InputDecoration(labelText: 'Medicine name')),
+                    controller: nameCtrl,
+                    decoration:
+                        const InputDecoration(labelText: 'Medicine name'),
+                  ),
                   TextField(
-                      controller: dosageCtrl,
-                      decoration:
-                          const InputDecoration(labelText: 'Dosage info')),
+                    controller: dosageCtrl,
+                    decoration:
+                        const InputDecoration(labelText: 'Dosage info'),
+                  ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
                       Text('Time: ${time.format(context)}'),
                       const SizedBox(width: 8),
                       ElevatedButton(
-                          onPressed: () async {
-                            final picked = await showTimePicker(
-                                context: context, initialTime: time);
-                            if (picked != null) setState(() => time = picked);
-                          },
-                          child: const Text('Pick time')),
+                        onPressed: () async {
+                          final picked =
+                              await showTimePicker(context: context, initialTime: time);
+                          if (picked != null) setState(() => time = picked);
+                        },
+                        child: const Text('Pick time'),
+                      ),
                     ],
                   ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: repeat,
+                    items: const [
+                      DropdownMenuItem(value: 'none', child: Text('No repeat')),
+                      DropdownMenuItem(value: 'daily', child: Text('Daily')),
+                      DropdownMenuItem(value: 'weekly', child: Text('Weekly')),
+                      DropdownMenuItem(value: 'monthly', child: Text('Monthly')),
+                    ],
+                    onChanged: (v) => setState(() => repeat = v ?? 'none'),
+                  ),
+                  if (repeat == 'weekly')
+                    DropdownButton<int>(
+                      value: weekday ?? DateTime.now().weekday,
+                      items: List.generate(
+                        7,
+                        (i) => DropdownMenuItem(
+                          value: i + 1,
+                          child: Text(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i]),
+                        ),
+                      ),
+                      onChanged: (v) => setState(() => weekday = v),
+                    ),
+                  const SizedBox(height: 8),
                   ElevatedButton(
-                      onPressed: () {
-                        vm.addMedicine(
-                            userId: uid,
-                            name: nameCtrl.text,
-                            dosage: dosageCtrl.text,
-                            hour: time.hour,
-                            minute: time.minute);
-                        nameCtrl.clear();
-                        dosageCtrl.clear();
-                      },
-                      child: const Text('Add medicine')),
+                    onPressed: () {
+                      if (nameCtrl.text.isEmpty || dosageCtrl.text.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content:
+                                  Text('Please enter medicine name and dosage.')),
+                        );
+                        return;
+                      }
+
+                      // Add medicine to database
+                      vm.addMedicine(
+                        userId: uid,
+                        name: nameCtrl.text,
+                        dosage: dosageCtrl.text,
+                        hour: time.hour,
+                        minute: time.minute,
+                      );
+
+                      // Schedule notification
+                      _scheduleNotification(uid, nameCtrl.text, dosageCtrl.text);
+
+                      nameCtrl.clear();
+                      dosageCtrl.clear();
+                    },
+                    child: const Text('Add medicine'),
+                  ),
                   const SizedBox(height: 12),
                   const Text('Your medicines', style: AppTextStyles.heading2),
                   const SizedBox(height: 8),
                   Expanded(
                     child: StreamBuilder<List<Medicine>>(
-                      stream: _medicinesStream, // use the persistent stream
+                      stream: _medicinesStream,
                       builder: (context, snap) {
                         if (!snap.hasData) {
-                          return const Center(
-                              child: CircularProgressIndicator());
+                          return const Center(child: CircularProgressIndicator());
                         }
                         final meds = snap.data!;
                         if (meds.isEmpty) {
                           return const Center(child: Text('No medicines'));
                         }
                         return ListView.builder(
-                            itemCount: meds.length,
-                            itemBuilder: (ctx, i) {
-                              final m = meds[i];
-                              return ListTile(
-                                title: Text(m.name),
-                                subtitle: Text(
-                                    '${m.dosage} — ${m.hour.toString().padLeft(2, '0')}:${m.minute.toString().padLeft(2, '0')}'),
-                                trailing: IconButton(
-                                    icon: const Icon(Icons.delete),
-                                    onPressed: () => vm.deleteMedicine(m.id)),
-                              );
-                            });
+                          itemCount: meds.length,
+                          itemBuilder: (ctx, i) {
+                            final m = meds[i];
+                            return ListTile(
+                              title: Text(m.name),
+                              subtitle: Text(
+                                  '${m.dosage} — ${m.hour.toString().padLeft(2, '0')}:${m.minute.toString().padLeft(2, '0')}'),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.delete),
+                                onPressed: () => vm.deleteMedicine(m.id),
+                              ),
+                            );
+                          },
+                        );
                       },
                     ),
                   ),

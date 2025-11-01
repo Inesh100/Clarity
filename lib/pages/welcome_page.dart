@@ -8,6 +8,8 @@ import 'journal_page.dart';
 import 'flashcard_page.dart';
 import 'reminders_page.dart';
 import 'medicine_page.dart';
+import '../core/notification_service.dart';
+
 
 class WelcomePage extends StatelessWidget {
   const WelcomePage({super.key});
@@ -68,6 +70,7 @@ class WelcomePage extends StatelessWidget {
                 children: [
                   _buildNavButton(
                       context, 'Journal', Icons.book, const JournalPage()),
+                      
                   _buildNavButton(context, 'Flashcards', Icons.school,
                       const FlashcardPage()),
                   _buildNavButton(context, 'Reminders', Icons.alarm,
@@ -77,6 +80,18 @@ class WelcomePage extends StatelessWidget {
                 ],
               ),
             ),
+ 
+             const SizedBox(height: 16),
+      ElevatedButton(
+        onPressed: () async {
+          await NotificationService.showNow(
+            id: 1,
+            title: 'Notification Test',
+            body: '✅ This is a test notification from Clarity!',
+          );
+        },
+        child: const Text('Test Notification'),
+      ),
 
             const SizedBox(height: 24),
             const Text(

@@ -20,17 +20,16 @@ class NotificationService {
       settings,
       onDidReceiveNotificationResponse: (resp) {},
     );
-    
   }
 
   /// Configure timezone using flutter_timezone 5.0.0
- static Future<void> _configureLocalTimeZone() async {
-  tzdata.initializeTimeZones();
+  static Future<void> _configureLocalTimeZone() async {
+    tzdata.initializeTimeZones();
 
-  final timezoneInfo = await FlutterTimezone.getLocalTimezone();
-  final String timeZoneName = timezoneInfo.identifier; // <-- use .identifier
-  tz.setLocalLocation(tz.getLocation(timeZoneName));
-}
+    final timezoneInfo = await FlutterTimezone.getLocalTimezone();
+    final String timeZoneName = timezoneInfo.identifier; // <-- use .identifier
+    tz.setLocalLocation(tz.getLocation(timeZoneName));
+  }
 
   /// Default notification details
   static NotificationDetails _defaultDetails() {
@@ -69,6 +68,26 @@ class NotificationService {
   }) async {
     await _plugin.show(id, title, body, _defaultDetails());
   }
+
+  /// Schedule a one-time notification
+  static Future<void> scheduleOneTime({
+  required String id,
+  required String title,
+  required String body,
+  required DateTime dateTime,
+}) async {
+  final scheduled = tz.TZDateTime.from(dateTime, tz.local);
+
+  await _plugin.zonedSchedule(
+    id.hashCode,
+    title,
+    body,
+    scheduled,
+    _defaultDetails(),
+    androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+  );
+}
+
 
   /// Schedule a daily notification
   static Future<void> scheduleDaily({

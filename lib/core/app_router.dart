@@ -10,6 +10,7 @@ import '../pages/profile_page.dart';
 import '../pages/settings_page.dart';
 import '../pages/notifications_page.dart';
 import '../pages/library_page.dart';
+import '../pages/about_page.dart';
 
 class AppRouter {
   static Route<dynamic> generateRoute(RouteSettings settings) {
@@ -36,6 +37,8 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const NotificationsPage());
       case '/library':
         return MaterialPageRoute(builder: (_) => const LibraryPage());
+        case '/about': // <-- added route
+        return MaterialPageRoute(builder: (_) => const CreditsPage());
       default:
         return MaterialPageRoute(builder: (_) => const LoginPage());
     }

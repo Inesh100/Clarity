@@ -9,6 +9,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  cupertino_icons: ^1.0.2
+  url_launcher: ^6.1.10
+
 
   # --- State management ---
   provider: ^6.1.5+1
@@ -38,4 +41,15 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "lib/images/app_image/clematis.png"
+  remove_alpha: true
+  remove_alpha_ios: true
+
+flutter:
+    uses-material-design: true
 
