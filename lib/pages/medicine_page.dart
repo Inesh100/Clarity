@@ -19,7 +19,7 @@ class _MedicinePageState extends State<MedicinePage> {
   TimeOfDay time = TimeOfDay.now();
   String repeat = 'daily';
   int? weekday;
-  late Stream<List<Medicine>> _medicinesStream;
+  Stream<List<Medicine>>? _medicinesStream;
 
   @override
   void didChangeDependencies() {
@@ -27,9 +27,14 @@ class _MedicinePageState extends State<MedicinePage> {
     final authVm = Provider.of<AuthViewModel>(context, listen: false);
     final vm = Provider.of<MedicineViewModel>(context, listen: false);
     final uid = authVm.firebaseUser?.uid;
-    if (uid != null) {
+    if (uid != null && _medicinesStream == null) {
       _medicinesStream = vm.streamMedicines(uid);
     }
+  }
+
+  Future<void> _pickTime() async {
+    final picked = await showTimePicker(context: context, initialTime: time);
+    if (picked != null) setState(() => time = picked);
   }
 
   @override
@@ -60,11 +65,7 @@ class _MedicinePageState extends State<MedicinePage> {
                       Text('Time: ${time.format(context)}'),
                       const SizedBox(width: 8),
                       ElevatedButton(
-                        onPressed: () async {
-                          final picked = await showTimePicker(
-                              context: context, initialTime: time);
-                          if (picked != null) setState(() => time = picked);
-                        },
+                        onPressed: _pickTime,
                         child: const Text('Pick time'),
                       ),
                     ],
@@ -73,7 +74,6 @@ class _MedicinePageState extends State<MedicinePage> {
                   DropdownButtonFormField<String>(
                     value: repeat,
                     items: const [
-                      DropdownMenuItem(value: 'none', child: Text('No repeat')),
                       DropdownMenuItem(value: 'daily', child: Text('Daily')),
                       DropdownMenuItem(value: 'weekly', child: Text('Weekly')),
                     ],
@@ -93,7 +93,7 @@ class _MedicinePageState extends State<MedicinePage> {
                     ),
                   const SizedBox(height: 8),
                   ElevatedButton(
-                    onPressed: () {
+                    onPressed: () async {
                       if (nameCtrl.text.isEmpty || dosageCtrl.text.isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Please enter medicine name and dosage.')),
@@ -101,9 +101,8 @@ class _MedicinePageState extends State<MedicinePage> {
                         return;
                       }
 
-                      // Call ViewModel to add medicine and schedule notification
-                      vm.addMedicine(
-                        userId: uid,
+                      await vm.addMedicine(
+                        userId: uid!,
                         name: nameCtrl.text,
                         dosage: dosageCtrl.text,
                         hour: time.hour,
@@ -114,35 +113,43 @@ class _MedicinePageState extends State<MedicinePage> {
 
                       nameCtrl.clear();
                       dosageCtrl.clear();
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('✅ Medicine saved & notification scheduled!')),
+                      );
                     },
                     child: const Text('Add medicine'),
                   ),
                   const SizedBox(height: 12),
-                  const Text('Your medicines', style: AppTextStyles.heading2),
+                  const Text('Your Medicines', style: AppTextStyles.heading2),
                   const SizedBox(height: 8),
                   Expanded(
-                    child: StreamBuilder<List<Medicine>>(
-                      stream: _medicinesStream,
-                      builder: (context, snap) {
-                        if (!snap.hasData) return const Center(child: CircularProgressIndicator());
-                        final meds = snap.data!;
-                        if (meds.isEmpty) return const Center(child: Text('No medicines'));
-                        return ListView.builder(
-                          itemCount: meds.length,
-                          itemBuilder: (ctx, i) {
-                            final m = meds[i];
-                            return ListTile(
-                              title: Text(m.name),
-                              subtitle: Text('${m.dosage} — ${m.hour.toString().padLeft(2,'0')}:${m.minute.toString().padLeft(2,'0')}'),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.delete),
-                                onPressed: () => vm.deleteMedicine(m.id),
-                              ),
-                            );
-                          },
-                        );
-                      },
-                    ),
+                    child: _medicinesStream == null
+                        ? const Center(child: CircularProgressIndicator())
+                        : StreamBuilder<List<Medicine>>(
+                            stream: _medicinesStream,
+                            builder: (context, snap) {
+                              if (!snap.hasData) {
+                                return const Center(child: CircularProgressIndicator());
+                              }
+                              final meds = snap.data!;
+                              if (meds.isEmpty) return const Center(child: Text('No medicines'));
+                              return ListView.builder(
+                                itemCount: meds.length,
+                                itemBuilder: (ctx, i) {
+                                  final m = meds[i];
+                                  return ListTile(
+                                    title: Text(m.name),
+                                    subtitle: Text('${m.dosage} — ${m.hour.toString().padLeft(2,'0')}:${m.minute.toString().padLeft(2,'0')}'),
+                                    trailing: IconButton(
+                                      icon: const Icon(Icons.delete),
+                                      onPressed: () => vm.deleteMedicine(m),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          ),
                   ),
                 ],
               ),

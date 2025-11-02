@@ -7,8 +7,10 @@ import '../core/notification_service.dart';
 class MedicineViewModel extends ChangeNotifier {
   final _repo = MedicineRepository();
 
+  /// Stream of medicines for a user
   Stream<List<Medicine>> streamMedicines(String userId) => _repo.getMedicines(userId);
 
+  /// Add a medicine and schedule its notification
   Future<void> addMedicine({
     required String userId,
     required String name,
@@ -16,11 +18,12 @@ class MedicineViewModel extends ChangeNotifier {
     required int hour,
     required int minute,
     String repeat = 'daily', // default daily
-    int? weekday, // only for weekly
+    int? weekday,
   }) async {
     final id = const Uuid().v4();
     final notificationId = id.hashCode;
 
+    // Save to repository
     final m = Medicine(
       id: id,
       userId: userId,
@@ -28,28 +31,16 @@ class MedicineViewModel extends ChangeNotifier {
       dosage: dosage,
       hour: hour,
       minute: minute,
-      repeat: repeat,
-      weekday: weekday,
     );
-
     await _repo.addMedicine(m);
 
-    // Schedule notification based on repeat type
+    // Schedule notification
     switch (repeat) {
-      case 'daily':
-        await NotificationService.scheduleDaily(
-          id: notificationId,
-          title: 'Medicine Reminder: $name',
-          body: dosage,
-          hour: hour,
-          minute: minute,
-        );
-        break;
       case 'weekly':
         if (weekday != null) {
           await NotificationService.scheduleWeekly(
             id: notificationId,
-            title: 'Medicine Reminder: $name',
+            title: 'Medicine: $name',
             body: dosage,
             weekday: weekday,
             hour: hour,
@@ -57,26 +48,23 @@ class MedicineViewModel extends ChangeNotifier {
           );
         }
         break;
-      case 'none':
-        final scheduledTime = DateTime(
-          DateTime.now().year,
-          DateTime.now().month,
-          DateTime.now().day,
-          hour,
-          minute,
-        );
-        await NotificationService.scheduleOneTime(
+
+      case 'daily':
+      default:
+        await NotificationService.scheduleDaily(
           id: notificationId,
-          title: 'Medicine Reminder: $name',
+          title: 'Medicine: $name',
           body: dosage,
-          dateTime: scheduledTime,
+          hour: hour,
+          minute: minute,
         );
         break;
     }
   }
 
-  Future<void> deleteMedicine(String id) async {
-    await _repo.deleteMedicine(id);
-    await NotificationService.cancel(id.hashCode);
+  /// Delete medicine and cancel its notification
+  Future<void> deleteMedicine(Medicine medicine) async {
+    await _repo.deleteMedicine(medicine.id);
+    await NotificationService.cancel(medicine.id.hashCode);
   }
 }

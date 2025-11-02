@@ -10,7 +10,6 @@ import 'reminders_page.dart';
 import 'medicine_page.dart';
 import '../core/notification_service.dart';
 
-
 class WelcomePage extends StatelessWidget {
   const WelcomePage({super.key});
 
@@ -18,7 +17,6 @@ class WelcomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
     final theme = Theme.of(context);
-
 
     final authVM = context.watch<AuthViewModel>();
     final name = authVM.appUser?.name ?? 'User';
@@ -46,7 +44,6 @@ class WelcomePage extends StatelessWidget {
           ),
         ],
       ),
-
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
@@ -60,7 +57,6 @@ class WelcomePage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-
             Expanded(
               child: GridView.count(
                 crossAxisCount: 2,
@@ -70,7 +66,6 @@ class WelcomePage extends StatelessWidget {
                 children: [
                   _buildNavButton(
                       context, 'Journal', Icons.book, const JournalPage()),
-                      
                   _buildNavButton(context, 'Flashcards', Icons.school,
                       const FlashcardPage()),
                   _buildNavButton(context, 'Reminders', Icons.alarm,
@@ -80,18 +75,35 @@ class WelcomePage extends StatelessWidget {
                 ],
               ),
             ),
- 
-             const SizedBox(height: 16),
-      ElevatedButton(
-        onPressed: () async {
-          await NotificationService.showNow(
-            id: 1,
-            title: 'Notification Test',
-            body: '✅ This is a test notification from Clarity!',
-          );
-        },
-        child: const Text('Test Notification'),
-      ),
+
+            const SizedBox(height: 16),
+
+            // Test Notification - Immediate
+            ElevatedButton(
+              onPressed: () async {
+                await NotificationService.scheduleOneTime(
+                  id: 1,
+                  title: 'Immediate Notification Test',
+                  body: '✅ This notification is scheduled immediately.',
+                  dateTime: DateTime.now().add(const Duration(seconds: 1)),
+                );
+              },
+              child: const Text('Test Notification Now'),
+            ),
+            const SizedBox(height: 8),
+
+            // Test Notification - 1 Minute Later
+            ElevatedButton(
+              onPressed: () async {
+                await NotificationService.scheduleOneTime(
+                  id: 2,
+                  title: '1-Minute Notification Test',
+                  body: '⏰ This notification is scheduled 1 minute from now.',
+                  dateTime: DateTime.now().add(const Duration(minutes: 1)),
+                );
+              },
+              child: const Text('Schedule 1-Minute Notification'),
+            ),
 
             const SizedBox(height: 24),
             const Text(

@@ -34,6 +34,32 @@ class _RemindersPageState extends State<RemindersPage> {
     }
   }
 
+  Future<void> _pickDateTime() async {
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: selected,
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2100),
+    );
+    if (pickedDate == null) return;
+
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(selected),
+    );
+    if (pickedTime == null) return;
+
+    setState(() {
+      selected = DateTime(
+        pickedDate.year,
+        pickedDate.month,
+        pickedDate.day,
+        pickedTime.hour,
+        pickedTime.minute,
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final authVm = Provider.of<AuthViewModel>(context);
@@ -62,31 +88,7 @@ class _RemindersPageState extends State<RemindersPage> {
                       Text('When: ${DateFormat.yMd().add_jm().format(selected)}'),
                       const SizedBox(width: 8),
                       ElevatedButton(
-                        onPressed: () async {
-                          final pickedDate = await showDatePicker(
-                            context: context,
-                            initialDate: selected,
-                            firstDate: DateTime.now(),
-                            lastDate: DateTime(2100),
-                          );
-                          if (pickedDate == null) return;
-
-                          final pickedTime = await showTimePicker(
-                            context: context,
-                            initialTime: TimeOfDay.fromDateTime(selected),
-                          );
-                          if (pickedTime == null) return;
-
-                          setState(() {
-                            selected = DateTime(
-                              pickedDate.year,
-                              pickedDate.month,
-                              pickedDate.day,
-                              pickedTime.hour,
-                              pickedTime.minute,
-                            );
-                          });
-                        },
+                        onPressed: _pickDateTime,
                         child: const Text('Pick date/time'),
                       ),
                     ],
@@ -108,7 +110,7 @@ class _RemindersPageState extends State<RemindersPage> {
                         7,
                         (i) => DropdownMenuItem(
                           value: i + 1,
-                          child: Text(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i]),
+                          child: Text(['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i]),
                         ),
                       ),
                       onChanged: (v) => setState(() => weekday = v),
@@ -123,7 +125,6 @@ class _RemindersPageState extends State<RemindersPage> {
                         return;
                       }
 
-                      // Save reminder and schedule notification via ViewModel
                       await vm.addReminder(
                         userId: uid!,
                         title: titleCtrl.text,
@@ -148,47 +149,35 @@ class _RemindersPageState extends State<RemindersPage> {
                   Expanded(
                     child: _reminderStream == null
                         ? const Center(child: CircularProgressIndicator())
-                        : ReminderList(stream: _reminderStream!),
+                        : StreamBuilder<List<ReminderModel>>(
+                            stream: _reminderStream,
+                            builder: (context, snap) {
+                              if (!snap.hasData) {
+                                return const Center(child: CircularProgressIndicator());
+                              }
+                              final items = snap.data!;
+                              if (items.isEmpty) return const Center(child: Text('No reminders'));
+                              return ListView.builder(
+                                itemCount: items.length,
+                                itemBuilder: (ctx, i) {
+                                  final r = items[i];
+                                  return ListTile(
+                                    title: Text(r.title),
+                                    subtitle: Text(DateFormat.yMd().add_jm().format(r.dateTime)),
+                                    trailing: IconButton(
+                                      icon: const Icon(Icons.delete),
+                                      onPressed: () => vm.deleteReminder(r),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          ),
                   ),
                 ],
               ),
             ),
       bottomNavigationBar: const CommonNavBar(),
-    );
-  }
-}
-
-class ReminderList extends StatelessWidget {
-  final Stream<List<ReminderModel>> stream;
-  const ReminderList({required this.stream, super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final vm = Provider.of<RemindersViewModel>(context, listen: false);
-
-    return StreamBuilder<List<ReminderModel>>(
-      stream: stream,
-      builder: (context, snap) {
-        if (!snap.hasData) return const Center(child: CircularProgressIndicator());
-
-        final items = snap.data!;
-        if (items.isEmpty) return const Center(child: Text('No reminders'));
-
-        return ListView.builder(
-          itemCount: items.length,
-          itemBuilder: (ctx, i) {
-            final r = items[i];
-            return ListTile(
-              title: Text(r.title),
-              subtitle: Text(DateFormat.yMd().add_jm().format(r.dateTime)),
-              trailing: IconButton(
-                icon: const Icon(Icons.delete),
-                onPressed: () => vm.deleteReminder(r.id),
-              ),
-            );
-          },
-        );
-      },
     );
   }
 }

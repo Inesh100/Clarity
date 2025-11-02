@@ -12,12 +12,15 @@ import 'viewmodels/journal_vm.dart';
 import 'viewmodels/flashcard_vm.dart';
 import 'providers/app_state.dart';
 
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await AppInitializer.initialize();
-  await NotificationService.initialize();
-  
 
+  // Initialize any app-specific services
+  await AppInitializer.initialize();
+
+  // Initialize notifications and timezone
+  await NotificationService.init();
 
   runApp(MultiProvider(
     providers: [
@@ -31,7 +34,6 @@ Future<void> main() async {
     ],
     child: const ClarityApp(),
   ));
-  
 }
 
 class ClarityApp extends StatelessWidget {
@@ -40,6 +42,7 @@ class ClarityApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Clarity',

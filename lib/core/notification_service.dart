@@ -1,90 +1,68 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:flutter_timezone/flutter_timezone.dart';
-import 'package:timezone/data/latest.dart' as tzdata;
+import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:flutter_timezone/flutter_timezone.dart'; // Ensure this import is present
+
+
 
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
 
-  /// Initialize notifications and timezone
-  static Future<void> initialize() async {
+  static Future<void> init() async {
+    // Android initialization
+    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const initSettings = InitializationSettings(android: androidInit);
+
+    // Initialize plugin
+    await _plugin.initialize(initSettings);
+
+    // Timezone setup
     await _configureLocalTimeZone();
-
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosSettings = DarwinInitializationSettings();
-    const settings =
-        InitializationSettings(android: androidSettings, iOS: iosSettings);
-
-    await _plugin.initialize(
-      settings,
-      onDidReceiveNotificationResponse: (resp) {},
-    );
   }
 
-  /// Configure timezone
   static Future<void> _configureLocalTimeZone() async {
-    tzdata.initializeTimeZones();
-    final timezoneInfo = await FlutterTimezone.getLocalTimezone();
-    tz.setLocalLocation(tz.getLocation(timezoneInfo.identifier));
-  }
-
-  /// Default notification details
-  static NotificationDetails _defaultDetails() {
-    const androidDetails = AndroidNotificationDetails(
-      'default_channel',
-      'General Notifications',
-      importance: Importance.max,
-      priority: Priority.high,
-    );
-    const iosDetails = DarwinNotificationDetails();
-    return const NotificationDetails(android: androidDetails, iOS: iosDetails);
-  }
-
-  /// Next instance helper
-  static tz.TZDateTime _nextInstance(int hour, int minute, {int? weekday}) {
-    final now = tz.TZDateTime.now(tz.local);
-    tz.TZDateTime scheduled =
-        tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
-
-    if (weekday != null) {
-      while (scheduled.weekday != weekday || scheduled.isBefore(now)) {
-        scheduled = scheduled.add(const Duration(days: 1));
-      }
-    } else if (scheduled.isBefore(now)) {
-      scheduled = scheduled.add(const Duration(days: 1));
+    try {
+      tz.initializeTimeZones();
+      // Await the TimezoneInfo object
+      final TimezoneInfo timeZoneInfo = await FlutterTimezone.getLocalTimezone();
+      // Extract the identifier string
+      final String localTimeZoneIdentifier = timeZoneInfo.identifier;
+      tz.setLocalLocation(tz.getLocation(localTimeZoneIdentifier));
+    } catch (e) {
+      // fallback to UTC if anything fails
+      tz.setLocalLocation(tz.getLocation('UTC'));
     }
-    return scheduled;
   }
 
-  /// Immediate notification
-  static Future<void> showNow({
-    required int id,
-    required String title,
-    required String body,
-  }) async {
-    await _plugin.show(id, title, body, _defaultDetails());
-  }
-
-  /// One-time notification
+  /// One-time notification at a specific time
   static Future<void> scheduleOneTime({
     required int id,
     required String title,
     required String body,
     required DateTime dateTime,
   }) async {
-    final scheduled = tz.TZDateTime.from(dateTime, tz.local);
+    final tzDateTime = tz.TZDateTime.from(dateTime, tz.local);
     await _plugin.zonedSchedule(
       id,
       title,
       body,
-      scheduled,
-      _defaultDetails(),
+      tzDateTime,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'main_channel',
+          'Main Notifications',
+          channelDescription: 'Medicine and Reminder Alerts',
+          importance: Importance.max,
+          priority: Priority.high,
+        ),
+      ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      matchDateTimeComponents: null,
     );
   }
 
-  /// Daily notification
+  /// Daily repeating notification
   static Future<void> scheduleDaily({
     required int id,
     required String title,
@@ -92,19 +70,33 @@ class NotificationService {
     required int hour,
     required int minute,
   }) async {
-    final scheduled = _nextInstance(hour, minute);
+    final now = tz.TZDateTime.now(tz.local);
+    var scheduledDate =
+        tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+    if (scheduledDate.isBefore(now)) {
+      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    }
+
     await _plugin.zonedSchedule(
       id,
       title,
       body,
-      scheduled,
-      _defaultDetails(),
+      scheduledDate,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'daily_channel',
+          'Daily Notifications',
+          channelDescription: 'Daily recurring alerts',
+          importance: Importance.max,
+          priority: Priority.high,
+        ),
+      ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.time,
     );
   }
 
-  /// Weekly notification
+  /// Weekly repeating notification
   static Future<void> scheduleWeekly({
     required int id,
     required String title,
@@ -113,21 +105,61 @@ class NotificationService {
     required int hour,
     required int minute,
   }) async {
-    final scheduled = _nextInstance(hour, minute, weekday: weekday);
+    final now = tz.TZDateTime.now(tz.local);
+    tz.TZDateTime scheduledDate = tz.TZDateTime(
+        tz.local, now.year, now.month, now.day, hour, minute);
+
+    while (scheduledDate.weekday != weekday) {
+      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    }
+
+    if (scheduledDate.isBefore(now)) {
+      scheduledDate = scheduledDate.add(const Duration(days: 7));
+    }
+
     await _plugin.zonedSchedule(
       id,
       title,
       body,
-      scheduled,
-      _defaultDetails(),
+      scheduledDate,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'weekly_channel',
+          'Weekly Notifications',
+          channelDescription: 'Weekly recurring alerts',
+          importance: Importance.max,
+          priority: Priority.high,
+        ),
+      ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
     );
   }
 
-  /// Cancel single notification
-  static Future<void> cancel(int id) => _plugin.cancel(id);
+  static Future<void> cancel(int id) async {
+    await _plugin.cancel(id);
+  }
 
-  /// Cancel all notifications
-  static Future<void> cancelAll() => _plugin.cancelAll();
+  static Future<void> cancelAll() async {
+    await _plugin.cancelAll();
+  }
+}
+
+
+
+
+class NotificationServicetest extends NotificationService {
+
+   final FlutterLocalNotificationsPlugin notificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+      @override
+
+void initState(){
+ 
+  init();
+
+  super.initState();
+}
+
+  
 }
