@@ -20,7 +20,7 @@ class _FlashcardPageState extends State<FlashcardPage> {
     final vm = Provider.of<FlashcardViewModel>(context);
     final uid = authVm.firebaseUser?.uid;
     return Scaffold(
-      appBar: AppBar(title: const Text('Flashcards')),
+      appBar: AppBar(title: const Text('Flash Cards')),
       body: uid == null ? const Center(child: Text('Sign in')) : Padding(
         padding: const EdgeInsets.all(12.0),
         child: Column(children: [

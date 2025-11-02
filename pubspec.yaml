@@ -7,10 +7,11 @@ environment:
   sdk: ">=3.4.0 <4.0.0"
 
 dependencies:
+  circular_countdown_timer: ^0.2.3
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.2
-  url_launcher: ^6.1.10
+  url_launcher: ^6.1.10 
 
 
   # --- State management ---

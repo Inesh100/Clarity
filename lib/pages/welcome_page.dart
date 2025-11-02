@@ -8,6 +8,7 @@ import 'journal_page.dart';
 import 'flashcard_page.dart';
 import 'reminders_page.dart';
 import 'medicine_page.dart';
+import 'motivation_timer_page.dart';
 import '../core/notification_service.dart';
 
 
@@ -71,12 +72,14 @@ class WelcomePage extends StatelessWidget {
                   _buildNavButton(
                       context, 'Journal', Icons.book, const JournalPage()),
                       
-                  _buildNavButton(context, 'Flashcards', Icons.school,
-                      const FlashcardPage()),
+                  _buildNavButton(context, 'Motivational & Study Timer', Icons.favorite,
+                      const MotivationTimerPage()),
                   _buildNavButton(context, 'Reminders', Icons.alarm,
                       const RemindersPage()),
                   _buildNavButton(
                       context, 'Medicine', Icons.medication, const MedicinePage()),
+                  _buildNavButton(
+                      context, 'Flashcards', Icons.school, const FlashcardPage()),
                 ],
               ),
             ),
