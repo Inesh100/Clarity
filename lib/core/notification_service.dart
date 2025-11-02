@@ -22,13 +22,11 @@ class NotificationService {
     );
   }
 
-  /// Configure timezone using flutter_timezone 5.0.0
+  /// Configure timezone
   static Future<void> _configureLocalTimeZone() async {
     tzdata.initializeTimeZones();
-
     final timezoneInfo = await FlutterTimezone.getLocalTimezone();
-    final String timeZoneName = timezoneInfo.identifier; // <-- use .identifier
-    tz.setLocalLocation(tz.getLocation(timeZoneName));
+    tz.setLocalLocation(tz.getLocation(timezoneInfo.identifier));
   }
 
   /// Default notification details
@@ -43,7 +41,7 @@ class NotificationService {
     return const NotificationDetails(android: androidDetails, iOS: iosDetails);
   }
 
-  /// Calculate next instance for daily/weekly notifications
+  /// Next instance helper
   static tz.TZDateTime _nextInstance(int hour, int minute, {int? weekday}) {
     final now = tz.TZDateTime.now(tz.local);
     tz.TZDateTime scheduled =
@@ -56,11 +54,10 @@ class NotificationService {
     } else if (scheduled.isBefore(now)) {
       scheduled = scheduled.add(const Duration(days: 1));
     }
-
     return scheduled;
   }
 
-  /// Show immediate notification
+  /// Immediate notification
   static Future<void> showNow({
     required int id,
     required String title,
@@ -69,29 +66,27 @@ class NotificationService {
     await _plugin.show(id, title, body, _defaultDetails());
   }
 
-  /// Schedule a one-time notification
+  /// One-time notification
   static Future<void> scheduleOneTime({
-  required String id,
-  required String title,
-  required String body,
-  required DateTime dateTime,
-}) async {
-  final scheduled = tz.TZDateTime.from(dateTime, tz.local);
+    required int id,
+    required String title,
+    required String body,
+    required DateTime dateTime,
+  }) async {
+    final scheduled = tz.TZDateTime.from(dateTime, tz.local);
+    await _plugin.zonedSchedule(
+      id,
+      title,
+      body,
+      scheduled,
+      _defaultDetails(),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+    );
+  }
 
-  await _plugin.zonedSchedule(
-    id.hashCode,
-    title,
-    body,
-    scheduled,
-    _defaultDetails(),
-    androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-  );
-}
-
-
-  /// Schedule a daily notification
+  /// Daily notification
   static Future<void> scheduleDaily({
-    required String id,
+    required int id,
     required String title,
     required String body,
     required int hour,
@@ -99,7 +94,7 @@ class NotificationService {
   }) async {
     final scheduled = _nextInstance(hour, minute);
     await _plugin.zonedSchedule(
-      id.hashCode,
+      id,
       title,
       body,
       scheduled,
@@ -109,9 +104,9 @@ class NotificationService {
     );
   }
 
-  /// Schedule a weekly notification
+  /// Weekly notification
   static Future<void> scheduleWeekly({
-    required String id,
+    required int id,
     required String title,
     required String body,
     required int weekday,
@@ -120,7 +115,7 @@ class NotificationService {
   }) async {
     final scheduled = _nextInstance(hour, minute, weekday: weekday);
     await _plugin.zonedSchedule(
-      id.hashCode,
+      id,
       title,
       body,
       scheduled,
@@ -130,8 +125,8 @@ class NotificationService {
     );
   }
 
-  /// Cancel a notification by ID
-  static Future<void> cancel(String id) => _plugin.cancel(id.hashCode);
+  /// Cancel single notification
+  static Future<void> cancel(int id) => _plugin.cancel(id);
 
   /// Cancel all notifications
   static Future<void> cancelAll() => _plugin.cancelAll();

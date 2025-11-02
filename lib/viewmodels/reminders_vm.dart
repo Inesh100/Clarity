@@ -18,20 +18,21 @@ class RemindersViewModel extends ChangeNotifier {
     int? weekday,
   }) async {
     final id = const Uuid().v4();
+    final notificationId = id.hashCode;
     final r = ReminderModel(id: id, userId: userId, title: title, message: message, dateTime: dateTime, repeat: repeat, weekday: weekday);
     await _repo.addReminder(r);
 
     if (repeat == 'daily') {
-      await NotificationService.scheduleDaily(id: id, title: title, body: message, hour: dateTime.hour, minute: dateTime.minute);
+      await NotificationService.scheduleDaily(id: notificationId, title: title, body: message, hour: dateTime.hour, minute: dateTime.minute);
     } else if (repeat == 'weekly' && weekday != null) {
-      await NotificationService.scheduleWeekly(id: id, title: title, body: message, weekday: weekday, hour: dateTime.hour, minute: dateTime.minute);
+      await NotificationService.scheduleWeekly(id: notificationId, title: title, body: message, weekday: weekday, hour: dateTime.hour, minute: dateTime.minute);
     } else {
-      await NotificationService.scheduleDaily(id: id, title: title, body: message, hour: dateTime.hour, minute: dateTime.minute);
+      await NotificationService.scheduleDaily(id: notificationId, title: title, body: message, hour: dateTime.hour, minute: dateTime.minute);
     }
   }
 
   Future<void> deleteReminder(String id) async {
     await _repo.deleteReminder(id);
-    await NotificationService.cancel(id);
+    await NotificationService.cancel(id.hashCode);
   }
 }

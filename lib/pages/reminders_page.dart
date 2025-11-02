@@ -6,7 +6,6 @@ import '../viewmodels/auth_vm.dart';
 import '../models/reminder_model.dart';
 import '../widgets/common_navbar.dart';
 import '../styles/app_text.dart';
-import '../core/notification_service.dart';
 
 class RemindersPage extends StatefulWidget {
   const RemindersPage({super.key});
@@ -124,10 +123,8 @@ class _RemindersPageState extends State<RemindersPage> {
                         return;
                       }
 
-                      final reminderId = titleCtrl.text + selected.toIso8601String();
-
-                      // Save reminder to Firestore
-                      vm.addReminder(
+                      // Save reminder and schedule notification via ViewModel
+                      await vm.addReminder(
                         userId: uid!,
                         title: titleCtrl.text,
                         message: messageCtrl.text,
@@ -135,37 +132,6 @@ class _RemindersPageState extends State<RemindersPage> {
                         repeat: repeat,
                         weekday: weekday,
                       );
-
-                      // Schedule notification
-                      final hour = selected.hour;
-                      final minute = selected.minute;
-
-                      if (repeat == 'daily') {
-                        await NotificationService.scheduleDaily(
-                          id: reminderId,
-                          title: titleCtrl.text,
-                          body: messageCtrl.text,
-                          hour: hour,
-                          minute: minute,
-                        );
-                      } else if (repeat == 'weekly' && weekday != null) {
-                        await NotificationService.scheduleWeekly(
-                          id: reminderId,
-                          title: titleCtrl.text,
-                          body: messageCtrl.text,
-                          weekday: weekday!,
-                          hour: hour,
-                          minute: minute,
-                        );
-                      } else {
-                        // One-time notification
-                        await NotificationService.scheduleOneTime(
-                          id: reminderId,
-                          title: titleCtrl.text,
-                          body: messageCtrl.text,
-                          dateTime: selected,
-                        );
-                      }
 
                       titleCtrl.clear();
                       messageCtrl.clear();
@@ -192,7 +158,6 @@ class _RemindersPageState extends State<RemindersPage> {
   }
 }
 
-// --- Stream-based list view of reminders ---
 class ReminderList extends StatelessWidget {
   final Stream<List<ReminderModel>> stream;
   const ReminderList({required this.stream, super.key});
