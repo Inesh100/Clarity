@@ -19,6 +19,7 @@ class _MedicinePageState extends State<MedicinePage> {
   TimeOfDay time = TimeOfDay.now();
   String repeat = 'daily';
   int? weekday;
+  int? weekOfMonth;
   Stream<List<Medicine>>? _medicinesStream;
 
   @override
@@ -76,10 +77,13 @@ class _MedicinePageState extends State<MedicinePage> {
                     items: const [
                       DropdownMenuItem(value: 'daily', child: Text('Daily')),
                       DropdownMenuItem(value: 'weekly', child: Text('Weekly')),
+                      DropdownMenuItem(value: 'monthly', child: Text('Monthly')),
                     ],
                     onChanged: (v) => setState(() => repeat = v ?? 'daily'),
                   ),
-                  if (repeat == 'weekly')
+
+                  // Weekday picker for weekly/monthly
+                  if (repeat == 'weekly' || repeat == 'monthly')
                     DropdownButton<int>(
                       value: weekday ?? DateTime.now().weekday,
                       items: List.generate(
@@ -91,6 +95,21 @@ class _MedicinePageState extends State<MedicinePage> {
                       ),
                       onChanged: (v) => setState(() => weekday = v),
                     ),
+
+                  // Week of month picker for monthly
+                  if (repeat == 'monthly')
+                    DropdownButton<int>(
+                      value: weekOfMonth ?? 1,
+                      items: List.generate(
+                        5,
+                        (i) => DropdownMenuItem(
+                          value: i + 1,
+                          child: Text('${i + 1}${i == 0 ? 'st' : i == 1 ? 'nd' : i == 2 ? 'rd' : 'th'} week'),
+                        ),
+                      ),
+                      onChanged: (v) => setState(() => weekOfMonth = v),
+                    ),
+
                   const SizedBox(height: 8),
                   ElevatedButton(
                     onPressed: () async {
@@ -109,6 +128,7 @@ class _MedicinePageState extends State<MedicinePage> {
                         minute: time.minute,
                         repeat: repeat,
                         weekday: weekday,
+                        weekOfMonth: weekOfMonth,
                       );
 
                       nameCtrl.clear();

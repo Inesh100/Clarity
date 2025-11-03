@@ -1,69 +1,47 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 import '../viewmodels/reminders_vm.dart';
 import '../viewmodels/auth_vm.dart';
 import '../models/reminder_model.dart';
-import '../widgets/common_navbar.dart';
 import '../styles/app_text.dart';
+import '../widgets/common_navbar.dart';
 
-class RemindersPage extends StatefulWidget {
-  const RemindersPage({super.key});
+class ReminderPage extends StatefulWidget {
+  const ReminderPage({super.key});
 
   @override
-  State<RemindersPage> createState() => _RemindersPageState();
+  State<ReminderPage> createState() => _ReminderPageState();
 }
 
-class _RemindersPageState extends State<RemindersPage> {
+class _ReminderPageState extends State<ReminderPage> {
   final titleCtrl = TextEditingController();
-  final messageCtrl = TextEditingController();
-  DateTime selected = DateTime.now();
-  String repeat = 'none';
+  final descCtrl = TextEditingController();
+  TimeOfDay time = TimeOfDay.now();
+  String repeat = 'daily';
   int? weekday;
-  Stream<List<ReminderModel>>? _reminderStream;
+  int? weekOfMonth;
+  Stream<List<Reminder>>? _remindersStream;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final authVm = Provider.of<AuthViewModel>(context, listen: false);
-    final vm = Provider.of<RemindersViewModel>(context, listen: false);
+    final vm = Provider.of<ReminderViewModel>(context, listen: false);
     final uid = authVm.firebaseUser?.uid;
-
-    if (uid != null && _reminderStream == null) {
-      _reminderStream = vm.streamReminders(uid);
+    if (uid != null && _remindersStream == null) {
+      _remindersStream = vm.streamReminders(uid);
     }
   }
 
-  Future<void> _pickDateTime() async {
-    final pickedDate = await showDatePicker(
-      context: context,
-      initialDate: selected,
-      firstDate: DateTime.now(),
-      lastDate: DateTime(2100),
-    );
-    if (pickedDate == null) return;
-
-    final pickedTime = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(selected),
-    );
-    if (pickedTime == null) return;
-
-    setState(() {
-      selected = DateTime(
-        pickedDate.year,
-        pickedDate.month,
-        pickedDate.day,
-        pickedTime.hour,
-        pickedTime.minute,
-      );
-    });
+  Future<void> _pickTime() async {
+    final picked = await showTimePicker(context: context, initialTime: time);
+    if (picked != null) setState(() => time = picked);
   }
 
   @override
   Widget build(BuildContext context) {
     final authVm = Provider.of<AuthViewModel>(context);
-    final vm = Provider.of<RemindersViewModel>(context);
+    final vm = Provider.of<ReminderViewModel>(context);
     final uid = authVm.firebaseUser?.uid;
 
     return Scaffold(
@@ -79,17 +57,17 @@ class _RemindersPageState extends State<RemindersPage> {
                     decoration: const InputDecoration(labelText: 'Title'),
                   ),
                   TextField(
-                    controller: messageCtrl,
-                    decoration: const InputDecoration(labelText: 'Message'),
+                    controller: descCtrl,
+                    decoration: const InputDecoration(labelText: 'Description'),
                   ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Text('When: ${DateFormat.yMd().add_jm().format(selected)}'),
+                      Text('Time: ${time.format(context)}'),
                       const SizedBox(width: 8),
                       ElevatedButton(
-                        onPressed: _pickDateTime,
-                        child: const Text('Pick date/time'),
+                        onPressed: _pickTime,
+                        child: const Text('Pick time'),
                       ),
                     ],
                   ),
@@ -97,13 +75,13 @@ class _RemindersPageState extends State<RemindersPage> {
                   DropdownButtonFormField<String>(
                     value: repeat,
                     items: const [
-                      DropdownMenuItem(value: 'none', child: Text('No repeat')),
                       DropdownMenuItem(value: 'daily', child: Text('Daily')),
                       DropdownMenuItem(value: 'weekly', child: Text('Weekly')),
+                      DropdownMenuItem(value: 'monthly', child: Text('Monthly')),
                     ],
-                    onChanged: (v) => setState(() => repeat = v ?? 'none'),
+                    onChanged: (v) => setState(() => repeat = v ?? 'daily'),
                   ),
-                  if (repeat == 'weekly')
+                  if (repeat == 'weekly' || repeat == 'monthly') 
                     DropdownButton<int>(
                       value: weekday ?? DateTime.now().weekday,
                       items: List.generate(
@@ -115,12 +93,24 @@ class _RemindersPageState extends State<RemindersPage> {
                       ),
                       onChanged: (v) => setState(() => weekday = v),
                     ),
+                  if (repeat == 'monthly')
+                    DropdownButton<int>(
+                      value: weekOfMonth ?? 1,
+                      items: List.generate(
+                        5,
+                        (i) => DropdownMenuItem(
+                          value: i + 1,
+                          child: Text('${i + 1}${i == 0 ? 'st' : i == 1 ? 'nd' : i == 2 ? 'rd' : 'th'} week'),
+                        ),
+                      ),
+                      onChanged: (v) => setState(() => weekOfMonth = v),
+                    ),
                   const SizedBox(height: 8),
                   ElevatedButton(
                     onPressed: () async {
-                      if (titleCtrl.text.isEmpty || messageCtrl.text.isEmpty) {
+                      if (titleCtrl.text.isEmpty || descCtrl.text.isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Please enter a title and message.')),
+                          const SnackBar(content: Text('Please enter title and description.')),
                         );
                         return;
                       }
@@ -128,42 +118,42 @@ class _RemindersPageState extends State<RemindersPage> {
                       await vm.addReminder(
                         userId: uid!,
                         title: titleCtrl.text,
-                        message: messageCtrl.text,
-                        dateTime: selected,
+                        description: descCtrl.text,
+                        hour: time.hour,
+                        minute: time.minute,
                         repeat: repeat,
                         weekday: weekday,
+                        weekOfMonth: weekOfMonth,
                       );
 
                       titleCtrl.clear();
-                      messageCtrl.clear();
+                      descCtrl.clear();
 
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('✅ Reminder saved & notification scheduled!')),
                       );
                     },
-                    child: const Text('Save reminder'),
+                    child: const Text('Add Reminder'),
                   ),
                   const SizedBox(height: 12),
                   const Text('Your Reminders', style: AppTextStyles.heading2),
                   const SizedBox(height: 8),
                   Expanded(
-                    child: _reminderStream == null
+                    child: _remindersStream == null
                         ? const Center(child: CircularProgressIndicator())
-                        : StreamBuilder<List<ReminderModel>>(
-                            stream: _reminderStream,
+                        : StreamBuilder<List<Reminder>>(
+                            stream: _remindersStream,
                             builder: (context, snap) {
-                              if (!snap.hasData) {
-                                return const Center(child: CircularProgressIndicator());
-                              }
-                              final items = snap.data!;
-                              if (items.isEmpty) return const Center(child: Text('No reminders'));
+                              if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+                              final reminders = snap.data!;
+                              if (reminders.isEmpty) return const Center(child: Text('No reminders'));
                               return ListView.builder(
-                                itemCount: items.length,
+                                itemCount: reminders.length,
                                 itemBuilder: (ctx, i) {
-                                  final r = items[i];
+                                  final r = reminders[i];
                                   return ListTile(
                                     title: Text(r.title),
-                                    subtitle: Text(DateFormat.yMd().add_jm().format(r.dateTime)),
+                                    subtitle: Text('${r.description} — ${r.hour.toString().padLeft(2,'0')}:${r.minute.toString().padLeft(2,'0')}'),
                                     trailing: IconButton(
                                       icon: const Icon(Icons.delete),
                                       onPressed: () => vm.deleteReminder(r),

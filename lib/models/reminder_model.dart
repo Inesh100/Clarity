@@ -1,39 +1,37 @@
-class ReminderModel {
+import 'package:flutter/foundation.dart';
+
+class Reminder {
   final String id;
   final String userId;
   final String title;
-  final String message;
-  final DateTime dateTime;
-  final String repeat;
-  final int? weekday;
+  final String description;
+  final int hour;
+  final int minute;
 
-  ReminderModel({
+  Reminder({
     required this.id,
     required this.userId,
     required this.title,
-    required this.message,
-    required this.dateTime,
-    this.repeat = 'none',
-    this.weekday,
+    required this.description,
+    required this.hour,
+    required this.minute,
   });
 
   Map<String, dynamic> toMap() => {
-    'id': id,
-    'userId': userId,
-    'title': title,
-    'message': message,
-    'dateTime': dateTime.toIso8601String(),
-    'repeat': repeat,
-    'weekday': weekday,
-  };
+        'id': id,
+        'userId': userId,
+        'title': title,
+        'description': description,
+        'hour': hour,
+        'minute': minute,
+      };
 
-  factory ReminderModel.fromMap(Map<String, dynamic> m) => ReminderModel(
-    id: m['id'],
-    userId: m['userId'],
-    title: m['title'],
-    message: m['message'],
-    dateTime: DateTime.parse(m['dateTime']),
-    repeat: m['repeat'] ?? 'none',
-    weekday: m['weekday'],
-  );
+  factory Reminder.fromMap(Map<String, dynamic> map) => Reminder(
+        id: map['id'],
+        userId: map['userId'],
+        title: map['title'],
+        description: map['description'],
+        hour: map['hour'],
+        minute: map['minute'],
+      );
 }

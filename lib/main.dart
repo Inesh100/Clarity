@@ -11,29 +11,32 @@ import 'viewmodels/profile_vm.dart';
 import 'viewmodels/journal_vm.dart';
 import 'viewmodels/flashcard_vm.dart';
 import 'providers/app_state.dart';
+import 'core/exact_alarm_permission_helper.dart';
 
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize any app-specific services
+  // Initialize app services (Firebase, SharedPreferences, etc.)
   await AppInitializer.initialize();
 
-  // Initialize notifications and timezone
-  await NotificationService.init();
+  // Initialize notification service
+  await NotificationService.instance.init();
 
-  runApp(MultiProvider(
-    providers: [
-      ChangeNotifierProvider(create: (_) => AppState()),
-      ChangeNotifierProvider(create: (_) => AuthViewModel()),
-      ChangeNotifierProvider(create: (_) => MedicineViewModel()),
-      ChangeNotifierProvider(create: (_) => RemindersViewModel()),
-      ChangeNotifierProvider(create: (_) => ProfileViewModel()),
-      ChangeNotifierProvider(create: (_) => JournalViewModel()),
-      ChangeNotifierProvider(create: (_) => FlashcardViewModel()),
-    ],
-    child: const ClarityApp(),
-  ));
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AppState()),
+        ChangeNotifierProvider(create: (_) => AuthViewModel()),
+        ChangeNotifierProvider(create: (_) => MedicineViewModel()),
+        ChangeNotifierProvider(create: (_) => ReminderViewModel()),
+        ChangeNotifierProvider(create: (_) => ProfileViewModel()),
+        ChangeNotifierProvider(create: (_) => JournalViewModel()),
+        ChangeNotifierProvider(create: (_) => FlashcardViewModel()),
+      ],
+      child: const ClarityApp(),
+    ),
+  );
 }
 
 class ClarityApp extends StatelessWidget {
@@ -41,7 +44,7 @@ class ClarityApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final appState = Provider.of<AppState>(context);
+    final appState = context.watch<AppState>();
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,

@@ -27,7 +27,7 @@ class AppRouter {
       case '/flashcard':
         return MaterialPageRoute(builder: (_) => const FlashcardPage());
       case '/reminders':
-        return MaterialPageRoute(builder: (_) => const RemindersPage());
+        return MaterialPageRoute(builder: (_) => const ReminderPage());
       case '/medicine':
         return MaterialPageRoute(builder: (_) => const MedicinePage());
       case '/profile':

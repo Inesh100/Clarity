@@ -4,76 +4,79 @@ import '../models/reminder_model.dart';
 import '../repositories/reminder_repository.dart';
 import '../core/notification_service.dart';
 
-class RemindersViewModel extends ChangeNotifier {
+class ReminderViewModel extends ChangeNotifier {
   final _repo = ReminderRepository();
 
-  /// Stream of reminders for a user
-  Stream<List<ReminderModel>> streamReminders(String userId) =>
+  Stream<List<Reminder>> streamReminders(String userId) =>
       _repo.getRemindersForUser(userId);
 
-  /// Add a reminder and schedule a notification
   Future<void> addReminder({
     required String userId,
     required String title,
-    required String message,
-    required DateTime dateTime,
-    String repeat = 'none',
+    required String description,
+    required int hour,
+    required int minute,
+    String repeat = 'daily',
     int? weekday,
+    int? weekOfMonth,
   }) async {
     final id = const Uuid().v4();
     final notificationId = id.hashCode;
 
-    // Save to repository
-    final r = ReminderModel(
+    final r = Reminder(
       id: id,
       userId: userId,
       title: title,
-      message: message,
-      dateTime: dateTime,
-      repeat: repeat,
-      weekday: weekday,
+      description: description,
+      hour: hour,
+      minute: minute,
     );
+
     await _repo.addReminder(r);
 
-    // Schedule notification
     switch (repeat) {
-      case 'daily':
-        await NotificationService.scheduleDaily(
-          id: notificationId,
-          title: title,
-          body: message,
-          hour: dateTime.hour,
-          minute: dateTime.minute,
-        );
-        break;
-
       case 'weekly':
         if (weekday != null) {
-          await NotificationService.scheduleWeekly(
+          await NotificationService.instance.scheduleWeekly(
             id: notificationId,
             title: title,
-            body: message,
+            body: description,
             weekday: weekday,
-            hour: dateTime.hour,
-            minute: dateTime.minute,
+            hour: hour,
+            minute: minute,
           );
         }
         break;
 
-      default: // one-time
-        await NotificationService.scheduleOneTime(
+      case 'monthly':
+        if (weekday != null && weekOfMonth != null) {
+          await NotificationService.instance.scheduleMonthly(
+            id: notificationId,
+            title: title,
+            body: description,
+            weekday: weekday,
+            hour: hour,
+            minute: minute,
+            weekOfMonth: weekOfMonth,
+          );
+        }
+        break;
+
+      case 'daily':
+      default:
+        await NotificationService.instance.scheduleDaily(
           id: notificationId,
           title: title,
-          body: message,
-          dateTime: dateTime,
+          body: description,
+          hour: hour,
+          minute: minute,
         );
         break;
     }
   }
 
-  /// Delete reminder and cancel its notification
-  Future<void> deleteReminder(ReminderModel reminder) async {
+  Future<void> deleteReminder(Reminder reminder) async {
     await _repo.deleteReminder(reminder.id);
-    await NotificationService.cancel(reminder.id.hashCode);
+    await NotificationService.instance.cancel(reminder.id.hashCode);
   }
 }

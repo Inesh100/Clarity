@@ -66,6 +66,28 @@ ElevatedButton.icon(
     textStyle: const TextStyle(fontSize: 16),
   ),
 ),
+ElevatedButton.icon(
+  onPressed: () {
+    Navigator.pushNamed(context, '/settings'); // Navigate to CreditsPage
+  },
+  icon: const Icon(Icons.settings),
+  label: const Text('Settings'),
+  style: ElevatedButton.styleFrom(
+    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+    textStyle: const TextStyle(fontSize: 16),
+  ),
+),
+ElevatedButton.icon(
+  onPressed: () {
+    Navigator.pushNamed(context, '/notifications'); // Navigate to CreditsPage
+  },
+  icon: const Icon(Icons.message_outlined),
+  label: const Text('Notifications'),
+  style: ElevatedButton.styleFrom(
+    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+    textStyle: const TextStyle(fontSize: 16),
+  ),
+),
                     ],
                   ),
                 ),

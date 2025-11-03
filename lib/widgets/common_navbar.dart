@@ -9,6 +9,7 @@ class CommonNavBar extends StatelessWidget {
       {'id': '/welcome', 'icon': Icons.home, 'label': 'Home'},
       {'id': '/journal', 'icon': Icons.book, 'label': 'Journal'},
       {'id': '/flashcard', 'icon': Icons.school, 'label': 'Flashcards'},
+      {'id':'/medicine', 'icon': Icons.medical_services, 'label': 'Medicine'},
       {'id': '/reminders', 'icon': Icons.alarm, 'label': 'Reminders'},
       {'id': '/profile', 'icon': Icons.person, 'label': 'Profile'},
     ];

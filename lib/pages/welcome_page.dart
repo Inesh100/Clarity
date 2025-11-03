@@ -10,15 +10,30 @@ import 'reminders_page.dart';
 import 'medicine_page.dart';
 import 'motivation_timer_page.dart';
 import '../core/notification_service.dart';
+import '../core/exact_alarm_permission_helper.dart'; // ✅ import helper
 
-class WelcomePage extends StatelessWidget {
+class WelcomePage extends StatefulWidget {
   const WelcomePage({super.key});
+
+  @override
+  State<WelcomePage> createState() => _WelcomePageState();
+}
+
+class _WelcomePageState extends State<WelcomePage> {
+  @override
+  void initState() {
+    super.initState();
+
+    // Ask for exact alarm permission after the first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ExactAlarmPermissionHelper.checkAndRequest(context);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
     final theme = Theme.of(context);
-
     final authVM = context.watch<AuthViewModel>();
     final name = authVM.appUser?.name ?? 'User';
 
@@ -45,9 +60,10 @@ class WelcomePage extends StatelessWidget {
           ),
         ],
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text('Welcome Back!', style: AppTextStyles.heading1),
             const SizedBox(height: 16),
@@ -58,61 +74,104 @@ class WelcomePage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            Expanded(
+            SizedBox(
+              height: 400,
               child: GridView.count(
+                physics: const NeverScrollableScrollPhysics(),
                 crossAxisCount: 2,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
                 childAspectRatio: 1.2,
                 children: [
-                  _buildNavButton(
-                      context, 'Journal', Icons.book, const JournalPage()),
-                      
-                  _buildNavButton(context, 'Motivational & Study Timer', Icons.favorite,
-                      const MotivationTimerPage()),
-                  _buildNavButton(context, 'Reminders', Icons.alarm,
-                      const RemindersPage()),
-                  _buildNavButton(
-                      context, 'Medicine', Icons.medication, const MedicinePage()),
-                  _buildNavButton(
-                      context, 'Flashcards', Icons.school, const FlashcardPage()),
+                  _buildNavButton(context, 'Journal', Icons.book, const JournalPage()),
+                  _buildNavButton(context, 'Motivational & Study Timer',
+                      Icons.favorite, const MotivationTimerPage()),
+                  _buildNavButton(context, 'Reminders', Icons.alarm, const ReminderPage()),
+                  _buildNavButton(context, 'Medicine', Icons.medication, const MedicinePage()),
+                  _buildNavButton(context, 'Flashcards', Icons.school, const FlashcardPage()),
                 ],
               ),
             ),
+            const SizedBox(height: 32),
 
-            const SizedBox(height: 16),
+            // Test Notifications Section
+            const Text('Test Notifications', style: AppTextStyles.heading2),
+            const SizedBox(height: 12),
 
-            // Test Notification - Immediate
             ElevatedButton(
               onPressed: () async {
-                await NotificationService.scheduleOneTime(
-                  id: 1,
-                  title: 'Immediate Notification Test',
-                  body: '✅ This notification is scheduled immediately.',
-                  dateTime: DateTime.now().add(const Duration(seconds: 1)),
+                await NotificationService.instance.showInstant(
+                  id: 100,
+                  title: 'Instant Notification',
+                  body: '✅ This notification appears immediately.',
                 );
               },
-              child: const Text('Test Notification Now'),
+              child: const Text('Show Instant Notification'),
             ),
             const SizedBox(height: 8),
 
-            // Test Notification - 1 Minute Later
             ElevatedButton(
               onPressed: () async {
-                await NotificationService.scheduleOneTime(
-                  id: 2,
-                  title: '1-Minute Notification Test',
-                  body: '⏰ This notification is scheduled 1 minute from now.',
+                await NotificationService.instance.scheduleOneTime(
+                  id: 101,
+                  title: 'One-Time Notification',
+                  body: '⏰ This triggers 1 minute from now.',
                   dateTime: DateTime.now().add(const Duration(minutes: 1)),
                 );
               },
               child: const Text('Schedule 1-Minute Notification'),
             ),
+            const SizedBox(height: 8),
 
+            ElevatedButton(
+              onPressed: () async {
+                await NotificationService.instance.scheduleDaily(
+                  id: 102,
+                  title: 'Daily Notification',
+                  body: '🗓 Repeats daily at this time.',
+                  hour: DateTime.now().hour,
+                  minute: (DateTime.now().minute + 1) % 60,
+                );
+              },
+              child: const Text('Schedule Daily Notification'),
+            ),
+            const SizedBox(height: 8),
+
+            ElevatedButton(
+              onPressed: () async {
+                await NotificationService.instance.scheduleWeekly(
+                  id: 103,
+                  title: 'Weekly Notification',
+                  body: '📅 Repeats weekly on the same weekday.',
+                  weekday: DateTime.now().weekday,
+                  hour: DateTime.now().hour,
+                  minute: (DateTime.now().minute + 2) % 60,
+                );
+              },
+              child: const Text('Schedule Weekly Notification'),
+            ),
+            const SizedBox(height: 8),
+
+            ElevatedButton(
+              onPressed: () async {
+                await NotificationService.instance.scheduleMonthly(
+                  id: 104,
+                  title: 'Monthly Notification',
+                  body: '🗓 Repeats monthly on the 2nd weekday.',
+                  weekday: DateTime.now().weekday,
+                  weekOfMonth: 2,
+                  hour: DateTime.now().hour,
+                  minute: (DateTime.now().minute + 3) % 60,
+                );
+              },
+              child: const Text('Schedule Monthly Notification'),
+            ),
             const SizedBox(height: 24),
+
             const Text(
               'Designed by Sedelle & Sade',
               style: AppTextStyles.small,
+              textAlign: TextAlign.center,
             ),
           ],
         ),
