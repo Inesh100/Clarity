@@ -49,8 +49,12 @@ class ClarityApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Clarity',
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
+      theme: AppTheme.lightTheme. copyWith(
+        textTheme: AppTheme.lightTheme.textTheme.apply(fontFamily: 'Verdana'), 
+      ), 
+      darkTheme: AppTheme.darkTheme.copyWith(
+        textTheme: AppTheme.darkTheme.textTheme.apply(fontFamily: 'Verdana'),
+      ), 
       themeMode: appState.isDarkMode ? ThemeMode.dark : ThemeMode.light,
       onGenerateRoute: AppRouter.generateRoute,
       initialRoute: '/',

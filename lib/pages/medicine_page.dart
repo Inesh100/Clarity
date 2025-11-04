@@ -81,8 +81,6 @@ class _MedicinePageState extends State<MedicinePage> {
                     ],
                     onChanged: (v) => setState(() => repeat = v ?? 'daily'),
                   ),
-
-                  // Weekday picker for weekly/monthly
                   if (repeat == 'weekly' || repeat == 'monthly')
                     DropdownButton<int>(
                       value: weekday ?? DateTime.now().weekday,
@@ -95,8 +93,6 @@ class _MedicinePageState extends State<MedicinePage> {
                       ),
                       onChanged: (v) => setState(() => weekday = v),
                     ),
-
-                  // Week of month picker for monthly
                   if (repeat == 'monthly')
                     DropdownButton<int>(
                       value: weekOfMonth ?? 1,
@@ -109,37 +105,6 @@ class _MedicinePageState extends State<MedicinePage> {
                       ),
                       onChanged: (v) => setState(() => weekOfMonth = v),
                     ),
-
-                  const SizedBox(height: 8),
-                  ElevatedButton(
-                    onPressed: () async {
-                      if (nameCtrl.text.isEmpty || dosageCtrl.text.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Please enter medicine name and dosage.')),
-                        );
-                        return;
-                      }
-
-                      await vm.addMedicine(
-                        userId: uid!,
-                        name: nameCtrl.text,
-                        dosage: dosageCtrl.text,
-                        hour: time.hour,
-                        minute: time.minute,
-                        repeat: repeat,
-                        weekday: weekday,
-                        weekOfMonth: weekOfMonth,
-                      );
-
-                      nameCtrl.clear();
-                      dosageCtrl.clear();
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('✅ Medicine saved & notification scheduled!')),
-                      );
-                    },
-                    child: const Text('Add medicine'),
-                  ),
                   const SizedBox(height: 12),
                   const Text('Your Medicines', style: AppTextStyles.heading2),
                   const SizedBox(height: 8),
@@ -160,7 +125,8 @@ class _MedicinePageState extends State<MedicinePage> {
                                   final m = meds[i];
                                   return ListTile(
                                     title: Text(m.name),
-                                    subtitle: Text('${m.dosage} — ${m.hour.toString().padLeft(2,'0')}:${m.minute.toString().padLeft(2,'0')}'),
+                                    subtitle: Text(
+                                        '${m.dosage} — ${m.hour.toString().padLeft(2,'0')}:${m.minute.toString().padLeft(2,'0')}'),
                                     trailing: IconButton(
                                       icon: const Icon(Icons.delete),
                                       onPressed: () => vm.deleteMedicine(m),
@@ -175,6 +141,40 @@ class _MedicinePageState extends State<MedicinePage> {
               ),
             ),
       bottomNavigationBar: const CommonNavBar(),
+
+      // Floating button at bottom right
+      floatingActionButton: uid == null
+          ? null
+          : FloatingActionButton(
+              onPressed: () async {
+                if (nameCtrl.text.isEmpty || dosageCtrl.text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter medicine name and dosage.')),
+                  );
+                  return;
+                }
+
+                await vm.addMedicine(
+                  userId: uid,
+                  name: nameCtrl.text,
+                  dosage: dosageCtrl.text,
+                  hour: time.hour,
+                  minute: time.minute,
+                  repeat: repeat,
+                  weekday: weekday,
+                  weekOfMonth: weekOfMonth,
+                );
+
+                nameCtrl.clear();
+                dosageCtrl.clear();
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('✅ Medicine saved & notification scheduled!')),
+                );
+              },
+              child: const Icon(Icons.add),
+            ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 }

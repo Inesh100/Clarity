@@ -105,36 +105,6 @@ class _ReminderPageState extends State<ReminderPage> {
                       ),
                       onChanged: (v) => setState(() => weekOfMonth = v),
                     ),
-                  const SizedBox(height: 8),
-                  ElevatedButton(
-                    onPressed: () async {
-                      if (titleCtrl.text.isEmpty || descCtrl.text.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Please enter title and description.')),
-                        );
-                        return;
-                      }
-
-                      await vm.addReminder(
-                        userId: uid!,
-                        title: titleCtrl.text,
-                        description: descCtrl.text,
-                        hour: time.hour,
-                        minute: time.minute,
-                        repeat: repeat,
-                        weekday: weekday,
-                        weekOfMonth: weekOfMonth,
-                      );
-
-                      titleCtrl.clear();
-                      descCtrl.clear();
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('✅ Reminder saved & notification scheduled!')),
-                      );
-                    },
-                    child: const Text('Add Reminder'),
-                  ),
                   const SizedBox(height: 12),
                   const Text('Your Reminders', style: AppTextStyles.heading2),
                   const SizedBox(height: 8),
@@ -168,6 +138,40 @@ class _ReminderPageState extends State<ReminderPage> {
               ),
             ),
       bottomNavigationBar: const CommonNavBar(),
+
+      // Floating button at bottom right
+      floatingActionButton: uid == null
+          ? null
+          : FloatingActionButton(
+              onPressed: () async {
+                if (titleCtrl.text.isEmpty || descCtrl.text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter title and description.')),
+                  );
+                  return;
+                }
+
+                await vm.addReminder(
+                  userId: uid,
+                  title: titleCtrl.text,
+                  description: descCtrl.text,
+                  hour: time.hour,
+                  minute: time.minute,
+                  repeat: repeat,
+                  weekday: weekday,
+                  weekOfMonth: weekOfMonth,
+                );
+
+                titleCtrl.clear();
+                descCtrl.clear();
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('✅ Reminder saved & notification scheduled!')),
+                );
+              },
+              child: const Icon(Icons.add),
+            ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 }

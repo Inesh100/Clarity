@@ -13,6 +13,7 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final emailCtrl = TextEditingController();
   final passCtrl = TextEditingController();
+  bool _obscurePassword = true; 
 
   @override
   Widget build(BuildContext context) {
@@ -30,15 +31,32 @@ class _LoginPageState extends State<LoginPage> {
 
             TextField(
               controller: emailCtrl,
-              decoration: const InputDecoration(labelText: 'Email'),
+              style: const TextStyle(fontSize: 16), 
+              decoration: InputDecoration(labelText: 'Email', 
+              labelStyle: TextStyle (fontSize: 16),
+              ),
             ),
             const SizedBox(height: 8),
 
+ // 🔹 Password Field with Toggle
             TextField(
               controller: passCtrl,
-              
-              obscureText: true,
-              decoration: const InputDecoration(labelText: 'Password'),
+              obscureText: _obscurePassword,
+              style: const TextStyle(fontSize: 16),
+              decoration: InputDecoration(
+                labelText: 'Password',
+                labelStyle: const TextStyle(fontSize: 16),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _obscurePassword = !_obscurePassword;
+                    });
+                  },
+                ),
+              ),
             ),
             const SizedBox(height: 16),
 
@@ -69,7 +87,9 @@ class _LoginPageState extends State<LoginPage> {
 
             TextButton(
               onPressed: () => Navigator.pushNamed(context, '/signup'),
-              child: const Text('Create account'),
+              child: const Text('Create account', 
+              style: TextStyle(fontSize: 18), 
+              ),
             ),
           ],
         ),

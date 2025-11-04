@@ -56,8 +56,18 @@ class ProfilePage extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
 ElevatedButton.icon(
+  onPressed: () => authVm.signOut(),
+  icon: const Icon(Icons.logout),
+  label: const Text('Sign Out'),
+  style: ElevatedButton.styleFrom(
+    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+    textStyle: const TextStyle(fontSize: 16),
+  ),
+),
+const SizedBox(height: 24), // evenly spaced
+ElevatedButton.icon(
   onPressed: () {
-    Navigator.pushNamed(context, '/about'); // Navigate to CreditsPage
+    Navigator.pushNamed(context, '/about');
   },
   icon: const Icon(Icons.info_outline),
   label: const Text('Credits'),
@@ -66,9 +76,10 @@ ElevatedButton.icon(
     textStyle: const TextStyle(fontSize: 16),
   ),
 ),
+const SizedBox(height: 24),
 ElevatedButton.icon(
   onPressed: () {
-    Navigator.pushNamed(context, '/settings'); // Navigate to CreditsPage
+    Navigator.pushNamed(context, '/settings');
   },
   icon: const Icon(Icons.settings),
   label: const Text('Settings'),
@@ -77,9 +88,10 @@ ElevatedButton.icon(
     textStyle: const TextStyle(fontSize: 16),
   ),
 ),
+const SizedBox(height: 24),
 ElevatedButton.icon(
   onPressed: () {
-    Navigator.pushNamed(context, '/notifications'); // Navigate to CreditsPage
+    Navigator.pushNamed(context, '/notifications');
   },
   icon: const Icon(Icons.message_outlined),
   label: const Text('Notifications'),
@@ -88,6 +100,7 @@ ElevatedButton.icon(
     textStyle: const TextStyle(fontSize: 16),
   ),
 ),
+
                     ],
                   ),
                 ),
