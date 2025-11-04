@@ -27,10 +27,6 @@ class _JournalPageState extends State<JournalPage> {
         child: Column(children: [
           TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Title')),
           TextField(controller: contentCtrl, decoration: const InputDecoration(labelText: 'Content')),
-          ElevatedButton(onPressed: () {
-            vm.addEntry(uid, titleCtrl.text, contentCtrl.text);
-            titleCtrl.clear(); contentCtrl.clear();
-          }, child: const Text('Save')),
           const SizedBox(height: 12),
           const Text('Entries', style: AppTextStyles.heading2),
           Expanded(child: StreamBuilder<List<JournalEntry>>(
@@ -49,6 +45,13 @@ class _JournalPageState extends State<JournalPage> {
               });
             },
           )),
+          Align(alignment: Alignment.bottomRight, 
+          child: ElevatedButton(onPressed: (){
+            vm.addEntry(uid, titleCtrl.text, contentCtrl.text);
+            titleCtrl.clear();
+          },
+          child: const Icon(Icons.save, size: 28), 
+          ))
         ]),
       ),
       bottomNavigationBar: const CommonNavBar(),
