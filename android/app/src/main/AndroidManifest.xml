@@ -6,14 +6,18 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY"/>
+    <!-- Use the below permission if scheduling notifications at exact times, and follow runtime permission guidance -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <!-- Optional: Add this permission if you are using Full Screen Intent notifications -->
+    <!-- <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" /> -->
 
-    <application
+    <application>
         android:label="Clarity"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:enableOnBackInvokedCallback="true"
 
-        <!-- Main Activity -->
+        
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -55,9 +59,23 @@
             </intent-filter>
         </receiver>
 
+        <!-- REQUIRED RECEIVER FOR ACTION BUTTONS (ADD THIS) -->
+        <receiver
+            android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver" />
+
+        <!-- Note: the FlutterLocalNotificationsReceiver is generally no longer needed in recent versions,
+             but does not hurt to leave in if you are using an older version of the plugin.
         <receiver
             android:exported="false"
             android:name="com.dexterous.flutterlocalnotifications.FlutterLocalNotificationsReceiver"/>
+        -->
+
+        <!-- Optional: Required if using foreground services -->
+        <!-- <service
+            android:name="com.dexterous.flutterlocalnotifications.ForegroundService"
+            android:foregroundServiceType="mediaPlayback"
+            android:exported="false"/> -->
 
     </application>
 
