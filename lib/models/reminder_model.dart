@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 class Reminder {
   final String id;
   final String userId;
@@ -27,11 +25,11 @@ class Reminder {
       };
 
   factory Reminder.fromMap(Map<String, dynamic> map) => Reminder(
-        id: map['id'],
-        userId: map['userId'],
-        title: map['title'],
-        description: map['description'],
-        hour: map['hour'],
-        minute: map['minute'],
+        id: map['id'] as String,
+        userId: map['userId'] as String,
+        title: map['title'] as String,
+        description: map['description'] as String,
+        hour: map['hour'] as int,
+        minute: map['minute'] as int,
       );
 }

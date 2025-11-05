@@ -1,88 +1,88 @@
+// core/notification_service.dart
+import 'dart:io';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
 class NotificationService {
-  NotificationService._(); // Private constructor for singleton
+  NotificationService._();
   static final NotificationService instance = NotificationService._();
 
-  final FlutterLocalNotificationsPlugin _plugin =
-      FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin plugin = FlutterLocalNotificationsPlugin();
 
   /// Initialize plugin and timezone
   Future<void> init() async {
-    // Initialize timezone data
     tz.initializeTimeZones();
-
     try {
-      final String currentTimeZone = await FlutterTimezone.getLocalTimezone();
-      tz.setLocalLocation(tz.getLocation(currentTimeZone));
-    } catch (e) {
-      tz.setLocalLocation(tz.getLocation('America/Port_of_Spain')); // fallback
+      final current = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(current));
+    } catch (_) {
+      tz.setLocalLocation(tz.getLocation('America/Port_of_Spain'));
     }
 
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosSettings = DarwinInitializationSettings();
+    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const iosInit = DarwinInitializationSettings();
+    const settings = InitializationSettings(android: androidInit, iOS: iosInit);
 
-    const initSettings =
-        InitializationSettings(android: androidSettings, iOS: iosSettings);
+    await plugin.initialize(settings);
 
-    await _plugin.initialize(initSettings);
+    // Android runtime permission (Android 13+)
+    if (Platform.isAndroid) {
+      final androidPlugin = plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      if (androidPlugin != null) {
+        // For some plugin versions this method exists; call if available.
+        try {
+          await androidPlugin.requestNotificationsPermission();
+        } catch (_) {
+          // ignore if not available; runtime permission handled elsewhere
+        }
+      }
+    }
   }
 
-  /// Show an instant notification
+  NotificationDetails _details(String id, String name, String description) {
+    return NotificationDetails(
+      android: AndroidNotificationDetails(
+        id,
+        name,
+        channelDescription: description,
+        importance: Importance.max,
+        priority: Priority.high,
+        playSound: true,
+      ),
+      iOS: DarwinNotificationDetails(),
+    );
+  }
+
+  /// Show instant notification
   Future<void> showInstant({
     required int id,
     required String title,
     required String body,
   }) async {
-    const androidDetails = AndroidNotificationDetails(
-      'instant_notification_channel_id',
-      'Instant Notifications',
-      channelDescription: 'Instant notification channel',
-      importance: Importance.max,
-      priority: Priority.high,
-    );
-
-    const details = NotificationDetails(
-      android: androidDetails,
-      iOS: DarwinNotificationDetails(),
-    );
-
-    await _plugin.show(id, title, body, details);
+    await plugin.show(id, title, body, _details('instant', 'Instant', 'Immediate alerts'));
   }
 
-  /// Schedule one-time notification
+  /// Schedule one-time notification (DateTime in local tz)
   Future<void> scheduleOneTime({
     required int id,
     required String title,
     required String body,
     required DateTime dateTime,
   }) async {
-    final tzDateTime = tz.TZDateTime.from(dateTime, tz.local);
-
-    await _plugin.zonedSchedule(
+    final schedule = tz.TZDateTime.from(dateTime, tz.local);
+    await plugin.zonedSchedule(
       id,
       title,
       body,
-      tzDateTime,
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'scheduled_channel',
-          'Scheduled Notifications',
-          channelDescription: 'One-time scheduled notifications',
-          importance: Importance.max,
-          priority: Priority.high,
-        ),
-        iOS: DarwinNotificationDetails(),
-      ),
+      schedule,
+      _details('once', 'One-Time', 'One-time reminders'),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      matchDateTimeComponents: null,
     );
   }
 
-  /// Schedule daily notification at given hour and minute
+  /// Schedule daily notification
   Future<void> scheduleDaily({
     required int id,
     required String title,
@@ -91,33 +91,21 @@ class NotificationService {
     required int minute,
   }) async {
     final now = tz.TZDateTime.now(tz.local);
-    var scheduledDate =
-        tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
-    if (scheduledDate.isBefore(now)) {
-      scheduledDate = scheduledDate.add(const Duration(days: 1));
-    }
+    var schedule = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+    if (schedule.isBefore(now)) schedule = schedule.add(const Duration(days: 1));
 
-    await _plugin.zonedSchedule(
+    await plugin.zonedSchedule(
       id,
       title,
       body,
-      scheduledDate,
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'daily_channel',
-          'Daily Notifications',
-          channelDescription: 'Daily recurring alerts',
-          importance: Importance.max,
-          priority: Priority.high,
-        ),
-        iOS: DarwinNotificationDetails(),
-      ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      schedule,
+      _details('daily', 'Daily', 'Daily reminders'),
       matchDateTimeComponents: DateTimeComponents.time,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
     );
   }
 
-  /// Schedule weekly notification on a specific weekday, hour, and minute
+  /// Schedule weekly notification (weekday: 1 = Monday, 7 = Sunday)
   Future<void> scheduleWeekly({
     required int id,
     required String title,
@@ -127,104 +115,71 @@ class NotificationService {
     required int minute,
   }) async {
     final now = tz.TZDateTime.now(tz.local);
-    tz.TZDateTime scheduledDate =
-        tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+    tz.TZDateTime schedule = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
 
-    while (scheduledDate.weekday != weekday) {
-      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    while (schedule.weekday != weekday) {
+      schedule = schedule.add(const Duration(days: 1));
     }
+    if (schedule.isBefore(now)) schedule = schedule.add(const Duration(days: 7));
 
-    if (scheduledDate.isBefore(now)) {
-      scheduledDate = scheduledDate.add(const Duration(days: 7));
-    }
-
-    await _plugin.zonedSchedule(
+    await plugin.zonedSchedule(
       id,
       title,
       body,
-      scheduledDate,
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'weekly_channel',
-          'Weekly Notifications',
-          channelDescription: 'Weekly recurring alerts',
-          importance: Importance.max,
-          priority: Priority.high,
-        ),
-        iOS: DarwinNotificationDetails(),
-      ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      schedule,
+      _details('weekly', 'Weekly', 'Weekly reminders'),
       matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
     );
   }
 
- Future<void> scheduleMonthly({
-  required int id,
-  required String title,
-  required String body,
-  required int weekday, // 1 = Monday, 7 = Sunday
-  required int hour,
-  required int minute,
-  required int weekOfMonth, // 1 = first week, 2 = second week, etc.
-}) async {
-  final now = tz.TZDateTime.now(tz.local); // Current local time
+  /// Schedule monthly notification using nth weekday or a specific date.
+  /// If using nth weekday scheduling, provide weekday & weekOfMonth and it will pick the Nth weekday.
+  Future<void> scheduleMonthly({
+    required int id,
+    required String title,
+    required String body,
+    required int weekday,
+    required int hour,
+    required int minute,
+    required int weekOfMonth,
+  }) async {
+    final now = tz.TZDateTime.now(tz.local);
+    tz.TZDateTime schedule = tz.TZDateTime(tz.local, now.year, now.month, 1, hour, minute);
 
-  // Start from the first day of the current month at the specified time
-  tz.TZDateTime scheduledDate =
-      tz.TZDateTime(tz.local, now.year, now.month, 1, hour, minute);
-
-  // Count the number of weekdays until we reach the desired one in the month
-  int weekdayCount = 0;
-  while (true) {
-    if (scheduledDate.weekday == weekday) {
-      weekdayCount++;
-      if (weekdayCount == weekOfMonth) break;
-    }
-    scheduledDate = scheduledDate.add(const Duration(days: 1));
-  }
-
-  // If the scheduled date has already passed, move to the same weekday next month
-  if (scheduledDate.isBefore(now)) {
-    scheduledDate = tz.TZDateTime(tz.local, now.year, now.month + 1, 1, hour, minute);
-    weekdayCount = 0;
+    int count = 0;
     while (true) {
-      if (scheduledDate.weekday == weekday) {
-        weekdayCount++;
-        if (weekdayCount == weekOfMonth) break;
+      if (schedule.weekday == weekday) {
+        count++;
+        if (count == weekOfMonth) break;
       }
-      scheduledDate = scheduledDate.add(const Duration(days: 1));
+      schedule = schedule.add(const Duration(days: 1));
     }
+
+    if (schedule.isBefore(now)) {
+      // next month
+      schedule = tz.TZDateTime(tz.local, now.year, now.month + 1, 1, hour, minute);
+      int c = 0;
+      while (true) {
+        if (schedule.weekday == weekday) {
+          c++;
+          if (c == weekOfMonth) break;
+        }
+        schedule = schedule.add(const Duration(days: 1));
+      }
+    }
+
+    await plugin.zonedSchedule(
+      id,
+      title,
+      body,
+      schedule,
+      _details('monthly', 'Monthly', 'Monthly reminders'),
+      matchDateTimeComponents: DateTimeComponents.dayOfMonthAndTime,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+    );
   }
 
-  // Schedule the notification
-  await _plugin.zonedSchedule(
-    id,
-    title,
-    body,
-    scheduledDate,
-    const NotificationDetails(
-      android: AndroidNotificationDetails(
-        'monthly_channel',
-        'Monthly Notifications',
-        channelDescription: 'Monthly recurring alerts',
-        importance: Importance.max,
-        priority: Priority.high,
-      ),
-      iOS: DarwinNotificationDetails(),
-    ),
-    androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-    matchDateTimeComponents: DateTimeComponents.dayOfMonthAndTime,
-  );
-}
-
-
-  /// Cancel a specific notification by id
-  Future<void> cancel(int id) async {
-    await _plugin.cancel(id);
-  }
-
-  /// Cancel all notifications
-  Future<void> cancelAll() async {
-    await _plugin.cancelAll();
-  }
+  Future<void> cancel(int id) async => plugin.cancel(id);
+  Future<void> cancelAll() async => plugin.cancelAll();
 }

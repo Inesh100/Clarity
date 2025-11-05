@@ -1,3 +1,4 @@
+// models/medicine_model.dart
 class Medicine {
   final String id;
   final String userId;
@@ -5,8 +6,6 @@ class Medicine {
   final String dosage;
   final int hour;
   final int minute;
-  final String repeat; // 'none', 'daily', 'weekly'
-  final int? weekday;  // 1=Mon ... 7=Sun, only for weekly
 
   Medicine({
     required this.id,
@@ -15,8 +14,6 @@ class Medicine {
     required this.dosage,
     required this.hour,
     required this.minute,
-    this.repeat = 'daily',
-    this.weekday,
   });
 
   Map<String, dynamic> toMap() => {
@@ -26,18 +23,14 @@ class Medicine {
         'dosage': dosage,
         'hour': hour,
         'minute': minute,
-        'repeat': repeat,
-        'weekday': weekday,
       };
 
-  factory Medicine.fromMap(Map<String, dynamic> m) => Medicine(
-        id: m['id'],
-        userId: m['userId'],
-        name: m['name'],
-        dosage: m['dosage'],
-        hour: m['hour'],
-        minute: m['minute'],
-        repeat: m['repeat'] ?? 'daily',
-        weekday: m['weekday'],
+  factory Medicine.fromMap(Map<String, dynamic> map) => Medicine(
+        id: map['id'] as String,
+        userId: map['userId'] as String,
+        name: map['name'] as String,
+        dosage: map['dosage'] as String,
+        hour: map['hour'] as int,
+        minute: map['minute'] as int,
       );
 }

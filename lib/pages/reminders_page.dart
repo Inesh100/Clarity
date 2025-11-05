@@ -1,5 +1,7 @@
+// pages/reminder_page.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../viewmodels/reminders_vm.dart';
 import '../viewmodels/auth_vm.dart';
 import '../models/reminder_model.dart';
@@ -16,17 +18,19 @@ class ReminderPage extends StatefulWidget {
 class _ReminderPageState extends State<ReminderPage> {
   final titleCtrl = TextEditingController();
   final descCtrl = TextEditingController();
+
   TimeOfDay time = TimeOfDay.now();
   String repeat = 'daily';
   int? weekday;
-  int? weekOfMonth;
+  DateTime? monthlyDate;
+
   Stream<List<Reminder>>? _remindersStream;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final authVm = Provider.of<AuthViewModel>(context, listen: false);
-    final vm = Provider.of<ReminderViewModel>(context, listen: false);
+    final vm = Provider.of<RemindersViewModel>(context, listen: false);
     final uid = authVm.firebaseUser?.uid;
     if (uid != null && _remindersStream == null) {
       _remindersStream = vm.streamReminders(uid);
@@ -38,10 +42,20 @@ class _ReminderPageState extends State<ReminderPage> {
     if (picked != null) setState(() => time = picked);
   }
 
+  Future<void> _pickMonthlyDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: monthlyDate ?? DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null) setState(() => monthlyDate = picked);
+  }
+
   @override
   Widget build(BuildContext context) {
     final authVm = Provider.of<AuthViewModel>(context);
-    final vm = Provider.of<ReminderViewModel>(context);
+    final vm = Provider.of<RemindersViewModel>(context);
     final uid = authVm.firebaseUser?.uid;
 
     return Scaffold(
@@ -52,23 +66,14 @@ class _ReminderPageState extends State<ReminderPage> {
               padding: const EdgeInsets.all(12.0),
               child: Column(
                 children: [
-                  TextField(
-                    controller: titleCtrl,
-                    decoration: const InputDecoration(labelText: 'Title'),
-                  ),
-                  TextField(
-                    controller: descCtrl,
-                    decoration: const InputDecoration(labelText: 'Description'),
-                  ),
+                  TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Title')),
+                  TextField(controller: descCtrl, decoration: const InputDecoration(labelText: 'Description')),
                   const SizedBox(height: 8),
                   Row(
                     children: [
                       Text('Time: ${time.format(context)}'),
                       const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: _pickTime,
-                        child: const Text('Pick time'),
-                      ),
+                      ElevatedButton(onPressed: _pickTime, child: const Text('Pick time')),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -81,30 +86,60 @@ class _ReminderPageState extends State<ReminderPage> {
                     ],
                     onChanged: (v) => setState(() => repeat = v ?? 'daily'),
                   ),
-                  if (repeat == 'weekly' || repeat == 'monthly') 
+                  const SizedBox(height: 8),
+                  if (repeat == 'weekly')
                     DropdownButton<int>(
                       value: weekday ?? DateTime.now().weekday,
                       items: List.generate(
                         7,
-                        (i) => DropdownMenuItem(
-                          value: i + 1,
-                          child: Text(['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i]),
-                        ),
+                        (i) => DropdownMenuItem(value: i + 1, child: Text(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i])),
                       ),
                       onChanged: (v) => setState(() => weekday = v),
                     ),
                   if (repeat == 'monthly')
-                    DropdownButton<int>(
-                      value: weekOfMonth ?? 1,
-                      items: List.generate(
-                        5,
-                        (i) => DropdownMenuItem(
-                          value: i + 1,
-                          child: Text('${i + 1}${i == 0 ? 'st' : i == 1 ? 'nd' : i == 2 ? 'rd' : 'th'} week'),
-                        ),
-                      ),
-                      onChanged: (v) => setState(() => weekOfMonth = v),
+                    ElevatedButton(
+                      onPressed: _pickMonthlyDate,
+                      child: Text(monthlyDate == null ? 'Pick a date' : DateFormat('dd/MM/yyyy').format(monthlyDate!)),
                     ),
+                  const SizedBox(height: 8),
+                  ElevatedButton(
+                    onPressed: () async {
+                      if (titleCtrl.text.isEmpty || descCtrl.text.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter title and description.')));
+                        return;
+                      }
+
+                      if (repeat == 'weekly' && weekday == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a weekday for weekly reminders.')));
+                        return;
+                      }
+
+                      if (repeat == 'monthly' && monthlyDate == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please pick a date for monthly reminders.')));
+                        return;
+                      }
+
+                      await vm.addReminder(
+                        context: context,
+                        userId: uid!,
+                        title: titleCtrl.text,
+                        description: descCtrl.text,
+                        hour: time.hour,
+                        minute: time.minute,
+                        repeat: repeat,
+                        weekday: weekday,
+                        monthlyDate: monthlyDate,
+                      );
+
+                      titleCtrl.clear();
+                      descCtrl.clear();
+                      monthlyDate = null;
+                      weekday = null;
+
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ Reminder saved & notification scheduled!')));
+                    },
+                    child: const Text('Add Reminder'),
+                  ),
                   const SizedBox(height: 12),
                   const Text('Your Reminders', style: AppTextStyles.heading2),
                   const SizedBox(height: 8),
@@ -123,11 +158,8 @@ class _ReminderPageState extends State<ReminderPage> {
                                   final r = reminders[i];
                                   return ListTile(
                                     title: Text(r.title),
-                                    subtitle: Text('${r.description} — ${r.hour.toString().padLeft(2,'0')}:${r.minute.toString().padLeft(2,'0')}'),
-                                    trailing: IconButton(
-                                      icon: const Icon(Icons.delete),
-                                      onPressed: () => vm.deleteReminder(r),
-                                    ),
+                                    subtitle: Text('${r.description} — ${r.hour.toString().padLeft(2, '0')}:${r.minute.toString().padLeft(2, '0')}'),
+                                    trailing: IconButton(icon: const Icon(Icons.delete), onPressed: () => vm.deleteReminder(r)),
                                   );
                                 },
                               );
@@ -138,40 +170,6 @@ class _ReminderPageState extends State<ReminderPage> {
               ),
             ),
       bottomNavigationBar: const CommonNavBar(),
-
-      // Floating button at bottom right
-      floatingActionButton: uid == null
-          ? null
-          : FloatingActionButton(
-              onPressed: () async {
-                if (titleCtrl.text.isEmpty || descCtrl.text.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please enter title and description.')),
-                  );
-                  return;
-                }
-
-                await vm.addReminder(
-                  userId: uid,
-                  title: titleCtrl.text,
-                  description: descCtrl.text,
-                  hour: time.hour,
-                  minute: time.minute,
-                  repeat: repeat,
-                  weekday: weekday,
-                  weekOfMonth: weekOfMonth,
-                );
-
-                titleCtrl.clear();
-                descCtrl.clear();
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('✅ Reminder saved & notification scheduled!')),
-                );
-              },
-              child: const Icon(Icons.add),
-            ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 }

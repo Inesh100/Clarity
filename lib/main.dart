@@ -1,3 +1,4 @@
+// main.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'core/app_router.dart';
@@ -13,23 +14,28 @@ import 'viewmodels/flashcard_vm.dart';
 import 'providers/app_state.dart';
 import 'core/exact_alarm_permission_helper.dart';
 
-//test test 2
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize app services (Firebase, SharedPreferences, etc.)
   await AppInitializer.initialize();
 
+  // Create a single AppState instance and provide it to the app
+  final appState = AppState();
+
   // Initialize notification service
   await NotificationService.instance.init();
 
+  // NOTE:
+  // We cannot call checkAndRequest(context) here because no BuildContext exists in main().
+  // Exact-alarm permission is requested after app starts (WelcomePage initState).
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AppState()),
+        ChangeNotifierProvider(create: (_) => appState),
         ChangeNotifierProvider(create: (_) => AuthViewModel()),
         ChangeNotifierProvider(create: (_) => MedicineViewModel()),
-        ChangeNotifierProvider(create: (_) => ReminderViewModel()),
+        ChangeNotifierProvider(create: (_) => RemindersViewModel()),
         ChangeNotifierProvider(create: (_) => ProfileViewModel()),
         ChangeNotifierProvider(create: (_) => JournalViewModel()),
         ChangeNotifierProvider(create: (_) => FlashcardViewModel()),
@@ -49,12 +55,8 @@ class ClarityApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Clarity',
-      theme: AppTheme.lightTheme. copyWith(
-        textTheme: AppTheme.lightTheme.textTheme.apply(fontFamily: 'Verdana'), 
-      ), 
-      darkTheme: AppTheme.darkTheme.copyWith(
-        textTheme: AppTheme.darkTheme.textTheme.apply(fontFamily: 'Verdana'),
-      ), 
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
       themeMode: appState.isDarkMode ? ThemeMode.dark : ThemeMode.light,
       onGenerateRoute: AppRouter.generateRoute,
       initialRoute: '/',

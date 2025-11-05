@@ -1,3 +1,4 @@
+// pages/welcome_page.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
@@ -10,7 +11,7 @@ import 'reminders_page.dart';
 import 'medicine_page.dart';
 import 'motivation_timer_page.dart';
 import '../core/notification_service.dart';
-import '../core/exact_alarm_permission_helper.dart'; // ✅ import helper
+import '../core/exact_alarm_permission_helper.dart';
 
 class WelcomePage extends StatefulWidget {
   const WelcomePage({super.key});
@@ -24,9 +25,12 @@ class _WelcomePageState extends State<WelcomePage> {
   void initState() {
     super.initState();
 
-    // Ask for exact alarm permission after the first frame
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ExactAlarmPermissionHelper.checkAndRequest(context);
+    // Ask for exact alarm permission after the first frame if the user enabled the toggle
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final enabled = await ExactAlarmPermissionHelper.isEnabled();
+      if (enabled) {
+        await ExactAlarmPermissionHelper.checkAndRequest(context);
+      }
     });
   }
 
@@ -50,11 +54,7 @@ class _WelcomePageState extends State<WelcomePage> {
             onPressed: () async {
               await context.read<AuthViewModel>().signOut();
               if (context.mounted) {
-                Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  '/login',
-                  (route) => false,
-                );
+                Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
               }
             },
           ),
@@ -84,8 +84,8 @@ class _WelcomePageState extends State<WelcomePage> {
                 childAspectRatio: 1.2,
                 children: [
                   _buildNavButton(context, 'Journal', Icons.book, const JournalPage()),
-                  _buildNavButton(context, 'Motivational & Study Timer',
-                      Icons.favorite, const MotivationTimerPage()),
+                  _buildNavButton(context, 'Motivational & Study Timer', Icons.favorite,
+                      const MotivationTimerPage()),
                   _buildNavButton(context, 'Reminders', Icons.alarm, const ReminderPage()),
                   _buildNavButton(context, 'Medicine', Icons.medication, const MedicinePage()),
                   _buildNavButton(context, 'Flashcards', Icons.school, const FlashcardPage()),
@@ -94,78 +94,9 @@ class _WelcomePageState extends State<WelcomePage> {
             ),
             const SizedBox(height: 32),
 
-            // Test Notifications Section
             const Text('Test Notifications', style: AppTextStyles.heading2),
             const SizedBox(height: 12),
-
-            ElevatedButton(
-              onPressed: () async {
-                await NotificationService.instance.showInstant(
-                  id: 100,
-                  title: 'Instant Notification',
-                  body: '✅ This notification appears immediately.',
-                );
-              },
-              child: const Text('Show Instant Notification'),
-            ),
-            const SizedBox(height: 8),
-
-            ElevatedButton(
-              onPressed: () async {
-                await NotificationService.instance.scheduleOneTime(
-                  id: 101,
-                  title: 'One-Time Notification',
-                  body: '⏰ This triggers 1 minute from now.',
-                  dateTime: DateTime.now().add(const Duration(minutes: 1)),
-                );
-              },
-              child: const Text('Schedule 1-Minute Notification'),
-            ),
-            const SizedBox(height: 8),
-
-            ElevatedButton(
-              onPressed: () async {
-                await NotificationService.instance.scheduleDaily(
-                  id: 102,
-                  title: 'Daily Notification',
-                  body: '🗓 Repeats daily at this time.',
-                  hour: DateTime.now().hour,
-                  minute: (DateTime.now().minute + 1) % 60,
-                );
-              },
-              child: const Text('Schedule Daily Notification'),
-            ),
-            const SizedBox(height: 8),
-
-            ElevatedButton(
-              onPressed: () async {
-                await NotificationService.instance.scheduleWeekly(
-                  id: 103,
-                  title: 'Weekly Notification',
-                  body: '📅 Repeats weekly on the same weekday.',
-                  weekday: DateTime.now().weekday,
-                  hour: DateTime.now().hour,
-                  minute: (DateTime.now().minute + 2) % 60,
-                );
-              },
-              child: const Text('Schedule Weekly Notification'),
-            ),
-            const SizedBox(height: 8),
-
-            ElevatedButton(
-              onPressed: () async {
-                await NotificationService.instance.scheduleMonthly(
-                  id: 104,
-                  title: 'Monthly Notification',
-                  body: '🗓 Repeats monthly on the 2nd weekday.',
-                  weekday: DateTime.now().weekday,
-                  weekOfMonth: 2,
-                  hour: DateTime.now().hour,
-                  minute: (DateTime.now().minute + 3) % 60,
-                );
-              },
-              child: const Text('Schedule Monthly Notification'),
-            ),
+            ..._buildNotificationButtons(),
             const SizedBox(height: 24),
 
             const Text(
@@ -180,10 +111,8 @@ class _WelcomePageState extends State<WelcomePage> {
     );
   }
 
-  Widget _buildNavButton(
-      BuildContext context, String label, IconData icon, Widget targetPage) {
+  Widget _buildNavButton(BuildContext context, String label, IconData icon, Widget targetPage) {
     final colorScheme = Theme.of(context).colorScheme;
-
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
         backgroundColor: colorScheme.primaryContainer,
@@ -199,13 +128,8 @@ class _WelcomePageState extends State<WelcomePage> {
             transitionDuration: const Duration(milliseconds: 350),
             pageBuilder: (_, __, ___) => targetPage,
             transitionsBuilder: (_, animation, __, child) => SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(1, 0),
-                end: Offset.zero,
-              ).animate(CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeOutCubic,
-              )),
+              position: Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero)
+                  .animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
               child: child,
             ),
           ),
@@ -220,5 +144,77 @@ class _WelcomePageState extends State<WelcomePage> {
         ],
       ),
     );
+  }
+
+  List<Widget> _buildNotificationButtons() {
+    final now = DateTime.now();
+    int uniqueId(int offset) => now.microsecondsSinceEpoch.remainder(100000) + offset;
+
+    return [
+      _notifButton('Instant Notification', () async {
+        await NotificationService.instance.showInstant(
+          id: uniqueId(0),
+          title: 'Instant Notification',
+          body: '✅ This notification appears immediately.',
+        );
+        _showSnack('Instant Notification sent!');
+      }),
+      _notifButton('Schedule 1-Minute Notification', () async {
+        await NotificationService.instance.scheduleOneTime(
+          id: uniqueId(1),
+          title: 'One-Time Notification',
+          body: '⏰ This triggers 1 minute from now.',
+          dateTime: now.add(const Duration(minutes: 1)),
+        );
+        _showSnack('1-Minute Notification scheduled!');
+      }),
+      _notifButton('Schedule Daily Notification', () async {
+        await NotificationService.instance.scheduleDaily(
+          id: uniqueId(2),
+          title: 'Daily Notification',
+          body: '🗓 Repeats daily at this time.',
+          hour: now.hour,
+          minute: (now.minute + 1) % 60,
+        );
+        _showSnack('Daily Notification scheduled!');
+      }),
+      _notifButton('Schedule Weekly Notification', () async {
+        await NotificationService.instance.scheduleWeekly(
+          id: uniqueId(3),
+          title: 'Weekly Notification',
+          body: '📅 Repeats weekly on the same weekday.',
+          weekday: now.weekday,
+          hour: now.hour,
+          minute: (now.minute + 2) % 60,
+        );
+        _showSnack('Weekly Notification scheduled!');
+      }),
+      _notifButton('Schedule Monthly Notification', () async {
+        await NotificationService.instance.scheduleMonthly(
+          id: uniqueId(4),
+          title: 'Monthly Notification',
+          body: '🗓 Repeats monthly on the 2nd weekday.',
+          weekday: now.weekday,
+          weekOfMonth: 2,
+          hour: now.hour,
+          minute: (now.minute + 3) % 60,
+        );
+        _showSnack('Monthly Notification scheduled!');
+      }),
+    ];
+  }
+
+  Widget _notifButton(String label, VoidCallback onPressed) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: ElevatedButton(onPressed: onPressed, child: Text(label)),
+    );
+  }
+
+  void _showSnack(String message) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), duration: const Duration(seconds: 2)));
+    }
   }
 }
