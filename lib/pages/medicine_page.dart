@@ -1,7 +1,7 @@
 // pages/medicine_page.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:table_calendar/table_calendar.dart';
+import 'package:intl/intl.dart';
 import '../viewmodels/medicine_vm.dart';
 import '../viewmodels/auth_vm.dart';
 import '../models/medicine_model.dart';
@@ -21,18 +21,20 @@ class _MedicinePageState extends State<MedicinePage> {
   TimeOfDay time = TimeOfDay.now();
   String repeat = 'daily';
   int? weekday;
-  int? weekOfMonth;
-  DateTime? selectedDate; // For monthly selection
+  DateTime? monthlyDate;
+
   Stream<List<Medicine>>? _medicinesStream;
+  String? uid;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final authVm = Provider.of<AuthViewModel>(context, listen: false);
-    final vm = Provider.of<MedicineViewModel>(context, listen: false);
-    final uid = authVm.firebaseUser?.uid;
+    uid = authVm.firebaseUser?.uid;
+
     if (uid != null && _medicinesStream == null) {
-      _medicinesStream = vm.streamMedicines(uid);
+      final vm = Provider.of<MedicineViewModel>(context, listen: false);
+      _medicinesStream = vm.streamMedicines(uid!);
     }
   }
 
@@ -41,11 +43,19 @@ class _MedicinePageState extends State<MedicinePage> {
     if (picked != null) setState(() => time = picked);
   }
 
+  Future<void> _pickMonthlyDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: monthlyDate ?? DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
+    );
+    if (picked != null) setState(() => monthlyDate = picked);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final authVm = Provider.of<AuthViewModel>(context);
     final vm = Provider.of<MedicineViewModel>(context);
-    final uid = authVm.firebaseUser?.uid;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Medicine Schedule')),
@@ -54,7 +64,9 @@ class _MedicinePageState extends State<MedicinePage> {
           : Padding(
               padding: const EdgeInsets.all(12.0),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // Medicine name & dosage
                   TextField(
                     controller: nameCtrl,
                     decoration: const InputDecoration(labelText: 'Medicine name'),
@@ -64,6 +76,8 @@ class _MedicinePageState extends State<MedicinePage> {
                     decoration: const InputDecoration(labelText: 'Dosage info'),
                   ),
                   const SizedBox(height: 8),
+
+                  // Time picker
                   Row(
                     children: [
                       Text('Time: ${time.format(context)}'),
@@ -72,6 +86,8 @@ class _MedicinePageState extends State<MedicinePage> {
                     ],
                   ),
                   const SizedBox(height: 8),
+
+                  // Repeat dropdown
                   DropdownButtonFormField<String>(
                     value: repeat,
                     items: const [
@@ -83,41 +99,32 @@ class _MedicinePageState extends State<MedicinePage> {
                   ),
                   const SizedBox(height: 8),
 
-                  // Weekly: pick weekday
-                  if (repeat == 'weekly' || repeat == 'monthly')
-                    DropdownButton<int>(
-                      value: weekday ?? DateTime.now().weekday,
-                      items: List.generate(
-                        7,
-                        (i) => DropdownMenuItem(
-                          value: i + 1,
-                          child: Text(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i]),
-                        ),
-                      ),
-                      onChanged: (v) => setState(() => weekday = v),
-                    ),
+                  // Weekday dropdown for weekly/monthly
+                  if (repeat == 'weekly')
+  DropdownButton<int>(
+    value: weekday ?? DateTime.now().weekday,
+    items: List.generate(
+      7,
+      (i) => DropdownMenuItem(
+        value: i + 1,
+        child: Text(['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i]),
+      ),
+    ),
+    onChanged: (v) => setState(() => weekday = v),
+  ),
 
-                  // Monthly: mini calendar for date selection
-                  if (repeat == 'monthly')
-                    TableCalendar(
-                      firstDay: DateTime.now(),
-                      lastDay: DateTime(DateTime.now().year + 2),
-                      focusedDay: selectedDate ?? DateTime.now(),
-                      selectedDayPredicate: (day) =>
-                          selectedDate != null &&
-                          day.year == selectedDate!.year &&
-                          day.month == selectedDate!.month &&
-                          day.day == selectedDate!.day,
-                      onDaySelected: (selectedDay, focusedDay) {
-                        setState(() => selectedDate = selectedDay);
-                      },
-                      calendarStyle: const CalendarStyle(
-                        todayDecoration: BoxDecoration(color: Colors.blueAccent, shape: BoxShape.circle),
-                        selectedDecoration: BoxDecoration(color: Colors.orangeAccent, shape: BoxShape.circle),
-                      ),
-                    ),
+// Monthly date picker only
+if (repeat == 'monthly')
+  ElevatedButton(
+    onPressed: _pickMonthlyDate,
+    child: Text(monthlyDate == null
+        ? 'Pick a date'
+        : DateFormat('dd/MM/yyyy').format(monthlyDate!)),
+  ),
 
                   const SizedBox(height: 8),
+
+                  // Add medicine button
                   ElevatedButton(
                     onPressed: () async {
                       if (nameCtrl.text.isEmpty || dosageCtrl.text.isEmpty) {
@@ -127,9 +134,16 @@ class _MedicinePageState extends State<MedicinePage> {
                         return;
                       }
 
-                      if (repeat == 'monthly' && selectedDate == null) {
+                      if (repeat == 'weekly' && weekday == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Please select a date for monthly medicine.')),
+                          const SnackBar(content: Text('Please select a weekday for weekly medicine.')),
+                        );
+                        return;
+                      }
+
+                      if (repeat == 'monthly' && monthlyDate == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Please pick a date for monthly medicine.')),
                         );
                         return;
                       }
@@ -143,13 +157,13 @@ class _MedicinePageState extends State<MedicinePage> {
                         minute: time.minute,
                         repeat: repeat,
                         weekday: weekday,
-                        monthlyDate: selectedDate,
-                        weekOfMonth: weekOfMonth,
+                        monthlyDate: monthlyDate,
                       );
 
                       nameCtrl.clear();
                       dosageCtrl.clear();
-                      selectedDate = null;
+                      monthlyDate = null;
+                      weekday = null;
 
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('✅ Medicine saved & notification scheduled!')),
@@ -160,15 +174,15 @@ class _MedicinePageState extends State<MedicinePage> {
                   const SizedBox(height: 12),
                   const Text('Your Medicines', style: AppTextStyles.heading2),
                   const SizedBox(height: 8),
+
+                  // Medicine list
                   Expanded(
                     child: _medicinesStream == null
                         ? const Center(child: CircularProgressIndicator())
                         : StreamBuilder<List<Medicine>>(
                             stream: _medicinesStream,
                             builder: (context, snap) {
-                              if (!snap.hasData) {
-                                return const Center(child: CircularProgressIndicator());
-                              }
+                              if (!snap.hasData) return const Center(child: CircularProgressIndicator());
                               final meds = snap.data!;
                               if (meds.isEmpty) return const Center(child: Text('No medicines'));
                               return ListView.builder(
@@ -178,7 +192,7 @@ class _MedicinePageState extends State<MedicinePage> {
                                   return ListTile(
                                     title: Text(m.name),
                                     subtitle: Text(
-                                        '${m.dosage} — ${m.hour.toString().padLeft(2, '0')}:${m.minute.toString().padLeft(2, '0')}'),
+                                        '${m.dosage} — ${m.hour.toString().padLeft(2,'0')}:${m.minute.toString().padLeft(2,'0')}'),
                                     trailing: IconButton(
                                       icon: const Icon(Icons.delete),
                                       onPressed: () => vm.deleteMedicine(m),

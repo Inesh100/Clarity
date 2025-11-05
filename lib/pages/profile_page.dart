@@ -10,11 +10,12 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authVm = Provider.of<AuthViewModel>(context);
-    final profileVm = Provider.of<ProfileViewModel>(context);
+    // Watch authVM so UI rebuilds when user signs in/out
+    final authVm = context.watch<AuthViewModel>();
+    final profileVm = context.watch<ProfileViewModel>();
     final uid = authVm.firebaseUser?.uid;
 
-    // Safely load user profile after build
+    // Load profile if signed in and not already loaded
     if (uid != null && profileVm.user == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         profileVm.loadProfile(uid);
@@ -23,89 +24,76 @@ class ProfilePage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Profile')),
-      body: profileVm.user == null
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView( // ✅ Prevents overflow on small screens
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CircleAvatar(
-                        radius: MediaQuery.of(context).size.width * 0.25, // ✅ Scales based on screen width
-                        child: Text(
-                          profileVm.user!.name.isNotEmpty
-                              ? profileVm.user!.name[0].toUpperCase()
-                              : 'U',
-                          style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
-                        ),
+      body: uid == null
+          ? const Center(
+              child: Text('You are not signed in', style: AppTextStyles.body),
+            )
+          : profileVm.user == null
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircleAvatar(
+                            radius: MediaQuery.of(context).size.width * 0.25,
+                            child: Text(
+                              profileVm.user!.name.isNotEmpty
+                                  ? profileVm.user!.name[0].toUpperCase()
+                                  : 'U',
+                              style: const TextStyle(
+                                  fontSize: 48, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          Text(profileVm.user!.name, style: AppTextStyles.heading2),
+                          Text(profileVm.user!.email, style: AppTextStyles.body),
+                          const SizedBox(height: 32),
+                          ElevatedButton.icon(
+                            onPressed: () async {
+                              await authVm.signOut();
+                              // Clear profile data on sign out
+                              profileVm.clearProfile();
+                            },
+                            icon: const Icon(Icons.logout),
+                            label: const Text('Sign Out'),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 32, vertical: 12),
+                              textStyle: const TextStyle(fontSize: 16),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.pushNamed(context, '/about');
+                            },
+                            icon: const Icon(Icons.info_outline),
+                            label: const Text('Credits'),
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.pushNamed(context, '/settings');
+                            },
+                            icon: const Icon(Icons.settings),
+                            label: const Text('Settings'),
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.pushNamed(context, '/notifications');
+                            },
+                            icon: const Icon(Icons.message_outlined),
+                            label: const Text('Medicine logs'),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 24),
-                      Text(profileVm.user!.name, style: AppTextStyles.heading2),
-                      Text(profileVm.user!.email, style: AppTextStyles.body),
-                      const SizedBox(height: 32),
-                      ElevatedButton.icon(
-                        onPressed: () => authVm.signOut(),
-                        icon: const Icon(Icons.logout),
-                        label: const Text('Sign Out'),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                          textStyle: const TextStyle(fontSize: 16),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-ElevatedButton.icon(
-  onPressed: () => authVm.signOut(),
-  icon: const Icon(Icons.logout),
-  label: const Text('Sign Out'),
-  style: ElevatedButton.styleFrom(
-    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-    textStyle: const TextStyle(fontSize: 16),
-  ),
-),
-const SizedBox(height: 24), // evenly spaced
-ElevatedButton.icon(
-  onPressed: () {
-    Navigator.pushNamed(context, '/about');
-  },
-  icon: const Icon(Icons.info_outline),
-  label: const Text('Credits'),
-  style: ElevatedButton.styleFrom(
-    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-    textStyle: const TextStyle(fontSize: 16),
-  ),
-),
-const SizedBox(height: 24),
-ElevatedButton.icon(
-  onPressed: () {
-    Navigator.pushNamed(context, '/settings');
-  },
-  icon: const Icon(Icons.settings),
-  label: const Text('Settings'),
-  style: ElevatedButton.styleFrom(
-    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-    textStyle: const TextStyle(fontSize: 16),
-  ),
-),
-const SizedBox(height: 24),
-ElevatedButton.icon(
-  onPressed: () {
-    Navigator.pushNamed(context, '/notifications');
-  },
-  icon: const Icon(Icons.message_outlined),
-  label: const Text('Notifications'),
-  style: ElevatedButton.styleFrom(
-    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-    textStyle: const TextStyle(fontSize: 16),
-  ),
-),
-
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            ),
       bottomNavigationBar: const CommonNavBar(),
     );
   }

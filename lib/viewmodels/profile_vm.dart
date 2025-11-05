@@ -7,14 +7,27 @@ class ProfileViewModel extends ChangeNotifier {
   AppUser? user;
   bool loading = false;
 
+  /// Load user profile from repository
   Future<void> loadProfile(String userId) async {
-    loading = true; notifyListeners();
+    loading = true;
+    notifyListeners();
+
     user = await _repo.getUser(userId);
-    loading = false; notifyListeners();
+
+    loading = false;
+    notifyListeners();
   }
 
+  /// Update user profile
   Future<void> updateProfile(AppUser u) async {
     await _repo.updateUser(u);
-    user = u; notifyListeners();
+    user = u;
+    notifyListeners();
+  }
+
+  /// Clear profile data, e.g., on sign out
+  void clearProfile() {
+    user = null;
+    notifyListeners();
   }
 }

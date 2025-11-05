@@ -24,13 +24,14 @@ class RemindersViewModel extends ChangeNotifier {
     int? weekday,
     DateTime? monthlyDate,
   }) async {
-    // Request exact alarm intent on Android when needed (helper or settings typically handles this)
+    /* // Request exact alarm intent on Android when needed (helper or settings typically handles this)
     if (Platform.isAndroid) {
       final intent = AndroidIntent(action: 'android.settings.REQUEST_SCHEDULE_EXACT_ALARM');
       try {
         await intent.launch();
       } catch (_) {}
     }
+    */
 
     final id = const Uuid().v4();
     final notificationId = id.hashCode;
