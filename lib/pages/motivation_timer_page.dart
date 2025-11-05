@@ -1,4 +1,4 @@
-import 'dart:math';
+// lib/pages/motivation_timer_page.dart
 import 'package:flutter/material.dart';
 import '../data/quotes.dart';
 import '../widgets/timer_widget.dart';
@@ -16,22 +16,20 @@ class _MotivationTimerPageState extends State<MotivationTimerPage> {
   @override
   void initState() {
     super.initState();
-    _getRandomQuote();
+    _getRandomGeneralQuote();
   }
 
-  void _getRandomQuote() {
-    final random = Random();
+  void _getRandomGeneralQuote() {
     setState(() {
-      currentQuote = adhdMotivationalQuotes[random.nextInt(adhdMotivationalQuotes.length)];
+      currentQuote = getRandomGeneralQuote();
     });
   }
 
   void _handleTimerComplete(bool success) {
-    final randomQuote = adhdMotivationalQuotes[Random().nextInt(adhdMotivationalQuotes.length)];
     setState(() {
       currentQuote = success
-          ? "Great job staying on task! 🎉\n\n$randomQuote"
-          : "You still made progress — that’s what counts. 👌\n\n$randomQuote";
+          ? getRandomSuccessQuote()
+          : getRandomFailureQuote();
     });
   }
 
