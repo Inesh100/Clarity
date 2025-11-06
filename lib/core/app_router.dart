@@ -1,3 +1,4 @@
+// lib/core/app_router.dart
 import 'package:flutter/material.dart';
 import '../pages/login_page.dart';
 import '../pages/signup_page.dart';
@@ -12,10 +13,14 @@ import '../pages/notifications_page.dart';
 import '../pages/library_page.dart';
 import '../pages/about_page.dart';
 import '../pages/motivation_timer_page.dart';
-
+import '../pages/splash_page.dart';
+import '../pages/edit_profile.dart';
 class AppRouter {
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
+      case '/':
+      case '/splash':
+        return MaterialPageRoute(builder: (_) => const SplashPage());
       case '/login':
         return MaterialPageRoute(builder: (_) => const LoginPage());
       case '/signup':
@@ -32,18 +37,20 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const MedicinePage());
       case '/profile':
         return MaterialPageRoute(builder: (_) => const ProfilePage());
+      case '/profile/edit':
+        return MaterialPageRoute(builder: (_) => const EditProfilePage());
       case '/settings':
         return MaterialPageRoute(builder: (_) => const SettingsPage());
       case '/notifications':
         return MaterialPageRoute(builder: (_) => const NotificationsPage());
       case '/library':
         return MaterialPageRoute(builder: (_) => const LibraryPage());
-      case '/about': // <-- added route
+      case '/about':
         return MaterialPageRoute(builder: (_) => const CreditsPage());
       case '/motivation_timer':
         return MaterialPageRoute(builder: (_) => const MotivationTimerPage());
       default:
-        return MaterialPageRoute(builder: (_) => const LoginPage());
+        return MaterialPageRoute(builder: (_) => const SplashPage());
     }
   }
 }

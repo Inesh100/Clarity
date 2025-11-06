@@ -9,31 +9,37 @@ class CommonNavBar extends StatelessWidget {
       {'id': '/welcome', 'icon': Icons.home, 'label': 'Home'},
       {'id': '/journal', 'icon': Icons.book, 'label': 'Journal'},
       {'id': '/flashcard', 'icon': Icons.school, 'label': 'Flashcards'},
-      {'id':'/medicine', 'icon': Icons.medical_services, 'label': 'Medicine'},
+      {'id': '/medicine', 'icon': Icons.medical_services, 'label': 'Medicine'},
       {'id': '/reminders', 'icon': Icons.alarm, 'label': 'Reminders'},
       {'id': '/profile', 'icon': Icons.person, 'label': 'Profile'},
     ];
 
-    // Determine current route name
-    final currentRoute = ModalRoute.of(context)?.settings.name ?? '/welcome';
-    int idx = items.indexWhere((i) => i['id'] == currentRoute);
-    if (idx < 0) idx = 0;
+    final currentRoute = ModalRoute.of(context)?.settings.name ?? '';
+
+    int currentIndex = items.indexWhere((i) => i['id'] == currentRoute);
+    if (currentIndex < 0) currentIndex = 0;
 
     return BottomNavigationBar(
-      currentIndex: idx,
-      onTap: (i) {
-        final targetRoute = items[i]['id'] as String;
-        if (targetRoute != currentRoute) {
+      currentIndex: currentIndex,
+      type: BottomNavigationBarType.fixed,
+      onTap: (index) {
+        final targetRoute = items[index]['id'] as String;
+        if (targetRoute == currentRoute) return;
+
+        if (targetRoute == '/welcome') {
+          Navigator.pushNamedAndRemoveUntil(context, targetRoute, (r) => false);
+        } else {
           Navigator.pushReplacementNamed(context, targetRoute);
         }
       },
       items: items
-          .map((it) => BottomNavigationBarItem(
-                icon: Icon(it['icon'] as IconData),
-                label: it['label'] as String,
-              ))
+          .map(
+            (i) => BottomNavigationBarItem(
+              icon: Icon(i['icon'] as IconData),
+              label: i['label'] as String,
+            ),
+          )
           .toList(),
-      type: BottomNavigationBarType.fixed,
     );
   }
 }

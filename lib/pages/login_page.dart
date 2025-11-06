@@ -14,6 +14,19 @@ class _LoginPageState extends State<LoginPage> {
   final emailCtrl = TextEditingController();
   final passCtrl = TextEditingController();
   bool _obscurePassword = true; 
+  bool _rememberMe = true; // default to true
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final vm = context.read<AuthViewModel>();
+      final email = await vm.getLastEmail();
+      if (email != null) {
+        emailCtrl.text = email;
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,13 +45,14 @@ class _LoginPageState extends State<LoginPage> {
             TextField(
               controller: emailCtrl,
               style: const TextStyle(fontSize: 16), 
-              decoration: InputDecoration(labelText: 'Email', 
-              labelStyle: TextStyle (fontSize: 16),
+              decoration: const InputDecoration(
+                labelText: 'Email', 
+                labelStyle: TextStyle(fontSize: 16),
               ),
             ),
             const SizedBox(height: 8),
 
- // 🔹 Password Field with Toggle
+            // Password Field
             TextField(
               controller: passCtrl,
               obscureText: _obscurePassword,
@@ -58,28 +72,67 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
 
-            // ✅ Fixed Sign-In button
+            // ✅ Remember Me checkbox
+            Row(
+              children: [
+                Checkbox(
+                  value: _rememberMe,
+                  onChanged: (val) {
+                    setState(() {
+                      _rememberMe = val ?? true;
+                    });
+                  },
+                ),
+                const Text("Remember Me"),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            // Sign-In button
             ElevatedButton(
               onPressed: () async {
                 await vm.signIn(emailCtrl.text.trim(), passCtrl.text);
                 if (!mounted) return;
-                Navigator.pushNamed(context, '/welcome');
+
+                if (vm.firebaseUser != null) {
+                  if (_rememberMe) {
+                    await vm.saveLastEmail(emailCtrl.text.trim());
+                  } else {
+                    await vm.clearLastEmail();
+                  }
+                  Navigator.pushNamedAndRemoveUntil(context, '/welcome', (_) => false);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(vm.error ?? 'Login failed')),
+                  );
+                }
               },
               child: const Text('Sign In'),
             ),
-
             const SizedBox(height: 8),
 
-            // ✅ Fixed Google Sign-In button
+            // Google Sign-In button
             ElevatedButton.icon(
               icon: const Icon(Icons.login),
               label: const Text('Sign In with Google'),
               onPressed: () async {
                 await vm.googleSignIn();
                 if (!mounted) return;
-                Navigator.pushNamed(context, '/welcome');
+
+                if (vm.firebaseUser != null) {
+                  if (_rememberMe) {
+                    await vm.saveLastEmail(vm.firebaseUser!.email ?? '');
+                  } else {
+                    await vm.clearLastEmail();
+                  }
+                  Navigator.pushNamedAndRemoveUntil(context, '/welcome', (_) => false);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(vm.error ?? 'Google sign-in failed')),
+                  );
+                }
               },
             ),
 
@@ -87,8 +140,9 @@ class _LoginPageState extends State<LoginPage> {
 
             TextButton(
               onPressed: () => Navigator.pushNamed(context, '/signup'),
-              child: const Text('Create account', 
-              style: TextStyle(fontSize: 18), 
+              child: const Text(
+                'Create account', 
+                style: TextStyle(fontSize: 18),
               ),
             ),
           ],

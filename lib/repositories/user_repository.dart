@@ -12,4 +12,8 @@ class UserRepository {
     return AppUser.fromMap(doc.data()!);
   }
   Future<void> updateUser(AppUser user) => _col.doc(user.id).update(user.toMap());
+
+Future<void> deleteUser(String uid) async {
+  await _col.doc(uid).delete();
+}
 }

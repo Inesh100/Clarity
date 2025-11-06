@@ -1,20 +1,89 @@
-// pages/settings_page.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
+import '../viewmodels/auth_vm.dart';
+import '../viewmodels/profile_vm.dart';
 import '../widgets/common_navbar.dart';
 import '../core/exact_alarm_permission_helper.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
 
+  Future<void> _deleteAccount(BuildContext context) async {
+    final authVm = context.read<AuthViewModel>();
+    final profileVm = context.read<ProfileViewModel>();
+    final user = authVm.firebaseUser;
+    if (user == null) return;
+
+    // Confirm deletion
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Delete Account"),
+        content: const Text("This action cannot be undone. Are you sure?"),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text("Cancel")),
+          TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text("Delete")),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    // Password prompt for email/password accounts
+    String? password;
+    final providers = user.providerData.map((p) => p.providerId).toList();
+    if (providers.contains('password')) {
+      final passwordController = TextEditingController();
+      final pwdConfirm = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text("Enter Password"),
+          content: TextField(
+            controller: passwordController,
+            obscureText: true,
+            decoration: const InputDecoration(labelText: "Password"),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text("Cancel")),
+            TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text("Confirm")),
+          ],
+        ),
+      );
+      if (pwdConfirm != true) return;
+      password = passwordController.text;
+    }
+
+    try {
+      await authVm.deleteAccount(password: password);
+      profileVm.clearProfile();
+
+      if (context.mounted) {
+        Navigator.pushNamedAndRemoveUntil(context, '/login', (_) => false);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final appState = Provider.of<AppState>(context);
+    final appState = context.watch<AppState>();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
-      body: Column(
+      body: ListView(
         children: [
           SwitchListTile(
             title: const Text('Dark Mode'),
@@ -27,20 +96,51 @@ class SettingsPage extends StatelessWidget {
               final isEnabled = snapshot.data ?? true;
               return SwitchListTile(
                 title: const Text('Enable Exact Alarm Permission'),
-                subtitle: const Text('Allow app to request exact alarm scheduling on Android'),
+                subtitle: const Text('Required for precise scheduled reminders'),
                 value: isEnabled,
                 onChanged: (value) async {
                   await ExactAlarmPermissionHelper.setEnabled(value);
-                  // Update AppState locally (optional)
                   appState.setExactAlarmEnabled(value);
                   if (value) {
-                    // Optionally prompt user to grant permission immediately
                     await ExactAlarmPermissionHelper.checkAndRequest(context);
                   }
                 },
               );
             },
           ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.person),
+            title: const Text("Edit Profile"),
+            onTap: () => Navigator.pushNamed(context, '/profile/edit'),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.delete_forever, color: Colors.red),
+            title: const Text("Delete Account",
+                style: TextStyle(color: Colors.red)),
+            onTap: () => _deleteAccount(context),
+          ),
+          const SizedBox(height: 20),
+          Center(
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.logout),
+              label: const Text("Sign Out"),
+              onPressed: () async {
+                final profileVm = context.read<ProfileViewModel>();
+                final authVm = context.read<AuthViewModel>();
+
+                profileVm.clearProfile();
+                await authVm.signOut();
+
+                if (context.mounted) {
+                  Navigator.pushNamedAndRemoveUntil(
+                      context, '/login', (_) => false);
+                }
+              },
+            ),
+          ),
+          const SizedBox(height: 40),
         ],
       ),
       bottomNavigationBar: const CommonNavBar(),
