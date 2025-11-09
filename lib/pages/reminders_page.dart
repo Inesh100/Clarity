@@ -1,4 +1,3 @@
-// pages/reminder_page.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -7,6 +6,7 @@ import '../viewmodels/auth_vm.dart';
 import '../models/reminder_model.dart';
 import '../styles/app_text.dart';
 import '../widgets/common_navbar.dart';
+import 'calendar_page.dart'; // ✅ Import the calendar page
 
 class ReminderPage extends StatefulWidget {
   const ReminderPage({super.key});
@@ -66,14 +66,23 @@ class _ReminderPageState extends State<ReminderPage> {
               padding: const EdgeInsets.all(12.0),
               child: Column(
                 children: [
-                  TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Title')),
-                  TextField(controller: descCtrl, decoration: const InputDecoration(labelText: 'Description')),
+                  TextField(
+                    controller: titleCtrl,
+                    decoration: const InputDecoration(labelText: 'Title'),
+                  ),
+                  TextField(
+                    controller: descCtrl,
+                    decoration: const InputDecoration(labelText: 'Description'),
+                  ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
                       Text('Time: ${time.format(context)}'),
                       const SizedBox(width: 8),
-                      ElevatedButton(onPressed: _pickTime, child: const Text('Pick time')),
+                      ElevatedButton(
+                        onPressed: _pickTime,
+                        child: const Text('Pick time'),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -92,54 +101,111 @@ class _ReminderPageState extends State<ReminderPage> {
                       value: weekday ?? DateTime.now().weekday,
                       items: List.generate(
                         7,
-                        (i) => DropdownMenuItem(value: i + 1, child: Text(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i])),
+                        (i) => DropdownMenuItem(
+                          value: i + 1,
+                          child: Text(
+                            ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i],
+                          ),
+                        ),
                       ),
                       onChanged: (v) => setState(() => weekday = v),
                     ),
                   if (repeat == 'monthly')
                     ElevatedButton(
                       onPressed: _pickMonthlyDate,
-                      child: Text(monthlyDate == null ? 'Pick a date' : DateFormat('dd/MM/yyyy').format(monthlyDate!)),
+                      child: Text(
+                        monthlyDate == null
+                            ? 'Pick a date'
+                            : DateFormat('dd/MM/yyyy').format(monthlyDate!),
+                      ),
                     ),
                   const SizedBox(height: 8),
-                  ElevatedButton(
-                    onPressed: () async {
-                      if (titleCtrl.text.isEmpty || descCtrl.text.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter title and description.')));
-                        return;
-                      }
 
-                      if (repeat == 'weekly' && weekday == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a weekday for weekly reminders.')));
-                        return;
-                      }
+                  /// ✅ Row with Add Reminder + Calendar Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            if (titleCtrl.text.isEmpty ||
+                                descCtrl.text.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Please enter title and description.'),
+                                ),
+                              );
+                              return;
+                            }
 
-                      if (repeat == 'monthly' && monthlyDate == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please pick a date for monthly reminders.')));
-                        return;
-                      }
+                            if (repeat == 'weekly' && weekday == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Please select a weekday for weekly reminders.'),
+                                ),
+                              );
+                              return;
+                            }
 
-                      await vm.addReminder(
-                        context: context,
-                        userId: uid!,
-                        title: titleCtrl.text,
-                        description: descCtrl.text,
-                        hour: time.hour,
-                        minute: time.minute,
-                        repeat: repeat,
-                        weekday: weekday,
-                        monthlyDate: monthlyDate,
-                      );
+                            if (repeat == 'monthly' && monthlyDate == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Please pick a date for monthly reminders.'),
+                                ),
+                              );
+                              return;
+                            }
 
-                      titleCtrl.clear();
-                      descCtrl.clear();
-                      monthlyDate = null;
-                      weekday = null;
+                            await vm.addReminder(
+                              context: context,
+                              userId: uid!,
+                              title: titleCtrl.text,
+                              description: descCtrl.text,
+                              hour: time.hour,
+                              minute: time.minute,
+                              repeat: repeat,
+                              weekday: weekday,
+                              monthlyDate: monthlyDate,
+                            );
 
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ Reminder saved & notification scheduled!')));
-                    },
-                    child: const Text('Add Reminder'),
+                            titleCtrl.clear();
+                            descCtrl.clear();
+                            monthlyDate = null;
+                            weekday = null;
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  '✅ Reminder saved & notification scheduled!',
+                                ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.add),
+                          label: const Text('Add Reminder'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const CalendarPage(),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.calendar_today),
+                          label: const Text('Calendar'),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Color(0xFFADD8E6)),
+                            backgroundColor: const Color(0xFFADD8E6)
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
+
                   const SizedBox(height: 12),
                   const Text('Your Reminders', style: AppTextStyles.heading2),
                   const SizedBox(height: 8),
@@ -149,17 +215,26 @@ class _ReminderPageState extends State<ReminderPage> {
                         : StreamBuilder<List<Reminder>>(
                             stream: _remindersStream,
                             builder: (context, snap) {
-                              if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+                              if (!snap.hasData) {
+                                return const Center(child: CircularProgressIndicator());
+                              }
                               final reminders = snap.data!;
-                              if (reminders.isEmpty) return const Center(child: Text('No reminders'));
+                              if (reminders.isEmpty) {
+                                return const Center(child: Text('No reminders'));
+                              }
                               return ListView.builder(
                                 itemCount: reminders.length,
                                 itemBuilder: (ctx, i) {
                                   final r = reminders[i];
                                   return ListTile(
                                     title: Text(r.title),
-                                    subtitle: Text('${r.description} — ${r.hour.toString().padLeft(2, '0')}:${r.minute.toString().padLeft(2, '0')}'),
-                                    trailing: IconButton(icon: const Icon(Icons.delete), onPressed: () => vm.deleteReminder(r)),
+                                    subtitle: Text(
+                                      '${r.description} — ${r.hour.toString().padLeft(2, '0')}:${r.minute.toString().padLeft(2, '0')}',
+                                    ),
+                                    trailing: IconButton(
+                                      icon: const Icon(Icons.delete),
+                                      onPressed: () => vm.deleteReminder(r),
+                                    ),
                                   );
                                 },
                               );
