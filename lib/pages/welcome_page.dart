@@ -109,7 +109,7 @@ class _WelcomePageState extends State<WelcomePage> {
               borderRadius: BorderRadius.circular(10),
             ),
             const SizedBox(height: 20),
-
+//discuss different options
             Text(
               "Choose where to go:",
               style: AppTextStyles.subtitle.copyWith(
