@@ -15,7 +15,9 @@ import '../pages/about_page.dart';
 import '../pages/motivation_timer_page.dart';
 import '../pages/splash_page.dart';
 import '../pages/edit_profile.dart';
-import '../pages/calendar_page.dart'; 
+import '../pages/medicine_log_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 class AppRouter {
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -50,8 +52,10 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const CreditsPage());
       case '/motivation_timer':
         return MaterialPageRoute(builder: (_) => const MotivationTimerPage());
-      case '/calendar':
-        return MaterialPageRoute(builder: (_) => const CalendarPage());
+      case 'medlog':
+        final userId = FirebaseAuth.instance.currentUser?.uid ?? "";
+        return MaterialPageRoute(
+        builder: (_) => MedicineLogPage(userId: userId),);
       default:
         return MaterialPageRoute(builder: (_) => const SplashPage());
     }

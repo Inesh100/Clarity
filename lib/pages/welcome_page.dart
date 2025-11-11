@@ -1,18 +1,21 @@
-// pages/welcome_page.dart
-import 'package:clarity/pages/calendar_page.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../providers/app_state.dart';
 import '../viewmodels/auth_vm.dart';
+import '../viewmodels/medicine_log_vm.dart';
+
 import '../styles/app_text.dart';
 import '../widgets/common_navbar.dart';
+
 import 'journal_page.dart';
 import 'flashcard_page.dart';
 import 'reminders_page.dart';
 import 'medicine_page.dart';
+import 'medicine_log_page.dart';
 import 'motivation_timer_page.dart';
-//import '../core/notification_service.dart';
 import '../core/exact_alarm_permission_helper.dart';
+import '../core/notification_service.dart';
 
 class WelcomePage extends StatefulWidget {
   const WelcomePage({super.key});
@@ -22,87 +25,102 @@ class WelcomePage extends StatefulWidget {
 }
 
 class _WelcomePageState extends State<WelcomePage> {
+  bool _initialized = false;
+
   @override
   void initState() {
     super.initState();
 
-    // Ask for exact alarm permission after the first frame if the user enabled the toggle
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final authVM = context.read<AuthViewModel>();
+      final logVM = context.read<MedicineLogViewModel>();
+      final userId = authVM.currentUserId;
+
+      // ✅ Load today's logs for progress bar
+      if (userId != null) {
+        await logVM.loadTodayLogs(userId);
+      }
+
+      // ✅ Request exact alarm permission on Android
       final enabled = await ExactAlarmPermissionHelper.isEnabled();
-      if (enabled) {
+      if (!enabled) {
         await ExactAlarmPermissionHelper.checkAndRequest(context);
+      }
+
+      if (mounted) {
+        setState(() => _initialized = true);
       }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final appState = Provider.of<AppState>(context);
-    final theme = Theme.of(context);
     final authVM = context.watch<AuthViewModel>();
-    final name = authVM.appUser?.name ?? 'User';
+
+    if (!_initialized || authVM.currentUserId == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final theme = Theme.of(context);
+    final appState = context.watch<AppState>();
+    final logVM = context.watch<MedicineLogViewModel>();
+
+    final userId = authVM.currentUserId!;
+    final name = authVM.appUser?.name ?? "User";
+
+    final progress = logVM.todayProgress;
+    final percent = (progress * 100).toStringAsFixed(0);
 
     return Scaffold(
       backgroundColor: appState.isDarkMode
           ? theme.colorScheme.surfaceContainerHighest
           : theme.colorScheme.surface,
+
       appBar: AppBar(
-        title: Text('Welcome, $name'),
+        title: Text("Welcome, $name"),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            tooltip: 'Sign Out',
             onPressed: () async {
-              await context.read<AuthViewModel>().signOut();
-              if (context.mounted) {
-                Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+              await authVM.signOut();
+              if (mounted) {
+                Navigator.pushNamedAndRemoveUntil(
+                    context, '/login', (_) => false);
               }
             },
-          ),
+          )
         ],
       ),
+
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Text("Today's Medicine Progress ($percent%)",
+                style: AppTextStyles.subtitle),
+            const SizedBox(height: 8),
 
-            // 🌟 STATIC PROGRESS BAR SECTION 🌟
-            Container(
-              height: 22,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: theme.colorScheme.primaryContainer,
-                  width: 2,
-                ),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: LinearProgressIndicator(
-                  value: 0.6, // Change this value (0.0 - 1.0) for progress level
-                  backgroundColor: theme.colorScheme.surface,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    theme.colorScheme.primaryContainer,
-                  ),
-                ),
-              ),
+            LinearProgressIndicator(
+              value: progress,
+              minHeight: 10,
+              borderRadius: BorderRadius.circular(10),
             ),
-            const SizedBox(height: 24),
-            // 🌟 END PROGRESS BAR SECTION 🌟
+            const SizedBox(height: 20),
 
-           // Text('Welcome Back!', style: AppTextStyles.heading1),
-           // const SizedBox(height: 16),
             Text(
-              'Choose where you want to go:',
+              "Choose where to go:",
               style: AppTextStyles.subtitle.copyWith(
                 color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
               ),
             ),
-            const SizedBox(height: 24),
+
+            const SizedBox(height: 20),
+
             SizedBox(
-              height: 400,
+              height: 700,
               child: GridView.count(
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisCount: 2,
@@ -110,54 +128,71 @@ class _WelcomePageState extends State<WelcomePage> {
                 mainAxisSpacing: 12,
                 childAspectRatio: 1.2,
                 children: [
-                  _buildNavButton(context, 'Journal', Icons.book, const JournalPage()),
-                  _buildNavButton(context, 'Motivational & Study Timer', Icons.favorite,
+                  _nav(context, "Journal", Icons.book, const JournalPage()),
+                  _nav(context, "Motivation & Timer", Icons.favorite,
                       const MotivationTimerPage()),
-                  _buildNavButton(context, 'Reminders', Icons.alarm, const ReminderPage()),
-                  _buildNavButton(context, 'Medicine', Icons.medication, const MedicinePage()),
-                  _buildNavButton(context, 'Flashcards', Icons.school, const FlashcardPage()),
-                  _buildNavButton(context, 'Calendar', Icons.calendar_month, const CalendarPage())
+                  _nav(context, "Reminders", Icons.alarm, const ReminderPage()),
+                  _nav(context, "Medicine", Icons.medication, const MedicinePage()),
+                  _nav(context, "Flashcards", Icons.school, const FlashcardPage()),
+                  _nav(context, "Medicine Logs", Icons.checklist_rounded,
+                      MedicineLogPage(userId: userId)),
                 ],
               ),
             ),
-            const SizedBox(height: 32),
+/*
+            const SizedBox(height: 20),
 
-            const Text(
-              'Designed by Sedelle & Sade',
-              style: AppTextStyles.small,
-              textAlign: TextAlign.center,
+            /// ✅ TEST NOTIFICATION BUTTONS
+          
+            Text("Debug Notifications",
+                style: AppTextStyles.subtitle
+                    .copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+
+            ElevatedButton(
+              onPressed: () =>
+                  NotificationService.instance.showTestNotification(
+                    "Daily Test 🔔",
+                    "This is a test daily reminder",
+                  ),
+              child: const Text("Test Daily Notification"),
             ),
+            const SizedBox(height: 10),
+
+            ElevatedButton(
+              onPressed: () =>
+                  NotificationService.instance.showTestNotification(
+                    "Weekly Test 🔔",
+                    "This is a test weekly reminder",
+                  ),
+              child: const Text("Test Weekly Notification"),
+            ),
+            const SizedBox(height: 10),
+
+            ElevatedButton(
+              onPressed: () =>
+                  NotificationService.instance.showTestNotification(
+                    "Monthly Test 🔔",
+                    "This is a test monthly reminder",
+                  ),
+              child: const Text("Test Monthly Notification"),
+            ),*/
           ],
         ),
       ),
+
       bottomNavigationBar: const CommonNavBar(),
     );
   }
 
-  Widget _buildNavButton(BuildContext context, String label, IconData icon, Widget targetPage) {
-    final colorScheme = Theme.of(context).colorScheme;
+  Widget _nav(BuildContext context, String label, IconData icon, Widget page) {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
-        backgroundColor: colorScheme.primaryContainer,
-        foregroundColor: colorScheme.onPrimaryContainer,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         padding: const EdgeInsets.all(16),
-        elevation: 2,
       ),
-      onPressed: () {
-        Navigator.push(
-          context,
-          PageRouteBuilder(
-            transitionDuration: const Duration(milliseconds: 350),
-            pageBuilder: (_, __, ___) => targetPage,
-            transitionsBuilder: (_, animation, __, child) => SlideTransition(
-              position: Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero)
-                  .animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
-              child: child,
-            ),
-          ),
-        );
-      },
+      onPressed: () =>
+          Navigator.push(context, MaterialPageRoute(builder: (_) => page)),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [

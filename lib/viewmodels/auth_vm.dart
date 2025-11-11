@@ -15,6 +15,9 @@ class AuthViewModel extends ChangeNotifier {
   bool loading = false;
   String? error;
 
+  /// ✅ Safe getter for userId
+  String? get currentUserId => firebaseUser?.uid;
+
   AuthViewModel() {
     _repo.authStateChanges().listen((user) async {
       firebaseUser = user;
@@ -40,35 +43,33 @@ class AuthViewModel extends ChangeNotifier {
   }
 
   Future<bool> signUp(String email, String password, String name) async {
-  try {
-    loading = true;
-    notifyListeners();
-
-    final user = await _repo.signUp(email, password);
-    if (user != null) {
-      final appU = AppUser(
-        id: user.uid,
-        name: name,
-        email: user.email ?? '',
-      );
-      await _userRepo.createUser(appU);
-
-      // Update local state immediately
-      firebaseUser = user;
-      appUser = appU;
+    try {
+      loading = true;
       notifyListeners();
-      return true;
-    }
-    return false;
-  } catch (e) {
-    error = e.toString();
-    return false;
-  } finally {
-    loading = false;
-    notifyListeners();
-  }
-}
 
+      final user = await _repo.signUp(email, password);
+      if (user != null) {
+        final appU = AppUser(
+          id: user.uid,
+          name: name,
+          email: user.email ?? '',
+        );
+        await _userRepo.createUser(appU);
+
+        firebaseUser = user;
+        appUser = appU;
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      error = e.toString();
+      return false;
+    } finally {
+      loading = false;
+      notifyListeners();
+    }
+  }
 
   Future<void> signIn(String email, String password) async {
     try {
@@ -103,7 +104,6 @@ class AuthViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Delete account with reauthentication
   Future<void> deleteAccount({String? password}) async {
     try {
       loading = true;
@@ -112,20 +112,14 @@ class AuthViewModel extends ChangeNotifier {
       final user = firebaseUser;
       if (user == null) throw Exception("No user logged in");
 
-      // Determine provider
       final providers = user.providerData.map((p) => p.providerId).toList();
 
-      // Email/password → require password
       if (providers.contains('password')) {
-        if (password == null) {
-          throw Exception("Password required to delete account.");
-        }
-        final credential =
-            EmailAuthProvider.credential(email: user.email!, password: password);
+        if (password == null) throw Exception("Password required to delete account.");
+        final credential = EmailAuthProvider.credential(email: user.email!, password: password);
         await user.reauthenticateWithCredential(credential);
       }
 
-      // Google → reauthenticate
       if (providers.contains('google.com')) {
         final googleUser = await GoogleSignIn().signIn();
         if (googleUser == null) throw Exception("Google reauthentication cancelled");
@@ -138,21 +132,11 @@ class AuthViewModel extends ChangeNotifier {
         await user.reauthenticateWithCredential(credential);
       }
 
-      // Delete Firestore profile
       await _userRepo.deleteUser(user.uid);
-
-      // Delete Firebase Auth account
       await user.delete();
 
-      // Clear local state
       firebaseUser = null;
       appUser = null;
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'requires-recent-login') {
-        error = 'Please log in again before deleting your account.';
-      } else {
-        error = e.message;
-      }
     } catch (e) {
       error = e.toString();
     } finally {
@@ -160,8 +144,6 @@ class AuthViewModel extends ChangeNotifier {
       notifyListeners();
     }
   }
-
- 
 
   Future<void> saveLastEmail(String email) async {
     final prefs = await SharedPreferences.getInstance();
@@ -172,9 +154,9 @@ class AuthViewModel extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('last_email');
   }
-  Future<void> clearLastEmail() async {
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.remove('last_email');
-}
-}
 
+  Future<void> clearLastEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('last_email');
+  }
+}
