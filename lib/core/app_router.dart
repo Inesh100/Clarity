@@ -15,6 +15,7 @@ import '../pages/about_page.dart';
 import '../pages/motivation_timer_page.dart';
 import '../pages/splash_page.dart';
 import '../pages/edit_profile.dart';
+import '../pages/calendar_page.dart'; 
 class AppRouter {
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -49,6 +50,8 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const CreditsPage());
       case '/motivation_timer':
         return MaterialPageRoute(builder: (_) => const MotivationTimerPage());
+      case '/calendar':
+        return MaterialPageRoute(builder: (_) => const CalendarPage());
       default:
         return MaterialPageRoute(builder: (_) => const SplashPage());
     }
