@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/medicine_log_model.dart';
 import '../viewmodels/medicine_log_vm.dart';
+import '../repositories/medicine_repository.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 class MedicineLogPage extends StatefulWidget {
@@ -13,6 +14,7 @@ class MedicineLogPage extends StatefulWidget {
 
 class _MedicineLogPageState extends State<MedicineLogPage> {
   final _vm = MedicineLogViewModel();
+  final _medRepo = MedicineRepository(); // ✅ instance
   DateTime _focusedDay = DateTime.now();
   DateTime _selectedDay = DateTime.now();
 
@@ -76,38 +78,43 @@ class _MedicineLogPageState extends State<MedicineLogPage> {
 
                     IconData icon;
                     Color color;
-                    String label;
 
                     switch (log.status) {
                       case "taken":
                         icon = Icons.check_circle;
                         color = Colors.green;
-                        label = "Taken ✅";
                         break;
-
                       case "missed":
                         icon = Icons.cancel;
                         color = Colors.red;
-                        label = "Missed ❌";
                         break;
-
-                      default: // pending
+                      default:
                         icon = Icons.access_time;
                         color = Colors.orange;
-                        label = "Pending ⏳";
                     }
 
                     return Card(
                       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       child: ListTile(
                         leading: Icon(icon, color: color, size: 32),
-                        title: Text(
-                          "Medicine ID: ${log.medicineId}",
-                          style: const TextStyle(fontWeight: FontWeight.w500),
+
+                        // ✅ Use instance method to get medicine name
+                        title: FutureBuilder<String>(
+                          future: _medRepo.getMedicineName(log.medicineId),
+                          builder: (_, snap) {
+                            return Text(
+                              snap.data ?? "Loading...",
+                              style: const TextStyle(fontWeight: FontWeight.w600),
+                            );
+                          },
                         ),
+
                         subtitle: Text(
-                          "Scheduled: ${log.scheduledTime.hour.toString().padLeft(2, '0')}:${log.scheduledTime.minute.toString().padLeft(2, '0')}"
+                          "Scheduled: "
+                          "${log.scheduledTime.hour.toString().padLeft(2, '0')}:"
+                          "${log.scheduledTime.minute.toString().padLeft(2, '0')}",
                         ),
+
                         trailing: _buildActionButtons(log),
                       ),
                     );
@@ -115,7 +122,7 @@ class _MedicineLogPageState extends State<MedicineLogPage> {
                 );
               },
             ),
-          )
+          ),
         ],
       ),
     );
