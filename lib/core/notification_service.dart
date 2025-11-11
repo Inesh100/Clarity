@@ -4,6 +4,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import '../core/medicine_log_service.dart';
 
 class NotificationService {
   NotificationService._();
@@ -21,23 +22,18 @@ class NotificationService {
       tz.setLocalLocation(tz.getLocation('America/Port_of_Spain'));
     }
 
-    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosInit = DarwinInitializationSettings();
-    const settings = InitializationSettings(android: androidInit, iOS: iosInit);
+    const settings = InitializationSettings(
+      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      iOS: DarwinInitializationSettings(),
+    );
 
     await plugin.initialize(settings);
 
-    // Android runtime permission (Android 13+)
     if (Platform.isAndroid) {
       final androidPlugin = plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-      if (androidPlugin != null) {
-        // For some plugin versions this method exists; call if available.
-        try {
-          await androidPlugin.requestNotificationsPermission();
-        } catch (_) {
-          // ignore if not available; runtime permission handled elsewhere
-        }
-      }
+      try {
+        await androidPlugin?.requestNotificationsPermission();
+      } catch (_) {}
     }
   }
 
@@ -55,7 +51,10 @@ class NotificationService {
     );
   }
 
-  /// Show instant notification
+  /// -------------------
+  /// GENERAL REMINDERS (no logs)
+  /// -------------------
+
   Future<void> showInstant({
     required int id,
     required String title,
@@ -64,7 +63,6 @@ class NotificationService {
     await plugin.show(id, title, body, _details('instant', 'Instant', 'Immediate alerts'));
   }
 
-  /// Schedule one-time notification (DateTime in local tz)
   Future<void> scheduleOneTime({
     required int id,
     required String title,
@@ -82,7 +80,6 @@ class NotificationService {
     );
   }
 
-  /// Schedule daily notification
   Future<void> scheduleDaily({
     required int id,
     required String title,
@@ -90,10 +87,7 @@ class NotificationService {
     required int hour,
     required int minute,
   }) async {
-    final now = tz.TZDateTime.now(tz.local);
-    var schedule = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
-    if (schedule.isBefore(now)) schedule = schedule.add(const Duration(days: 1));
-
+    var schedule = _nextDaily(hour, minute);
     await plugin.zonedSchedule(
       id,
       title,
@@ -105,7 +99,6 @@ class NotificationService {
     );
   }
 
-  /// Schedule weekly notification (weekday: 1 = Monday, 7 = Sunday)
   Future<void> scheduleWeekly({
     required int id,
     required String title,
@@ -114,14 +107,7 @@ class NotificationService {
     required int hour,
     required int minute,
   }) async {
-    final now = tz.TZDateTime.now(tz.local);
-    tz.TZDateTime schedule = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
-
-    while (schedule.weekday != weekday) {
-      schedule = schedule.add(const Duration(days: 1));
-    }
-    if (schedule.isBefore(now)) schedule = schedule.add(const Duration(days: 7));
-
+    var schedule = _nextWeekly(weekday, hour, minute);
     await plugin.zonedSchedule(
       id,
       title,
@@ -133,8 +119,6 @@ class NotificationService {
     );
   }
 
-  /// Schedule monthly notification using nth weekday or a specific date.
-  /// If using nth weekday scheduling, provide weekday & weekOfMonth and it will pick the Nth weekday.
   Future<void> scheduleMonthly({
     required int id,
     required String title,
@@ -144,31 +128,7 @@ class NotificationService {
     required int minute,
     required int weekOfMonth,
   }) async {
-    final now = tz.TZDateTime.now(tz.local);
-    tz.TZDateTime schedule = tz.TZDateTime(tz.local, now.year, now.month, 1, hour, minute);
-
-    int count = 0;
-    while (true) {
-      if (schedule.weekday == weekday) {
-        count++;
-        if (count == weekOfMonth) break;
-      }
-      schedule = schedule.add(const Duration(days: 1));
-    }
-
-    if (schedule.isBefore(now)) {
-      // next month
-      schedule = tz.TZDateTime(tz.local, now.year, now.month + 1, 1, hour, minute);
-      int c = 0;
-      while (true) {
-        if (schedule.weekday == weekday) {
-          c++;
-          if (c == weekOfMonth) break;
-        }
-        schedule = schedule.add(const Duration(days: 1));
-      }
-    }
-
+    var schedule = _nextMonthly(weekday, hour, minute, weekOfMonth);
     await plugin.zonedSchedule(
       id,
       title,
@@ -180,6 +140,174 @@ class NotificationService {
     );
   }
 
+  /// -------------------
+  /// MEDICINE NOTIFICATIONS (with logs)
+  /// -------------------
+
+  Future<void> scheduleDailyMedicineReminder({
+    required String logId,
+    required String medicineId,
+    required String userId,
+    required int hour,
+    required int minute,
+    required String title,
+    required String body,
+  }) async {
+    var schedule = _nextDaily(hour, minute);
+
+    await plugin.zonedSchedule(
+      logId.hashCode,
+      title,
+      body,
+      schedule,
+      _details('daily', 'Daily', 'Daily medicine reminders'),
+      payload: logId,
+      matchDateTimeComponents: DateTimeComponents.time,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+    );
+
+    await MedicineLogService.instance.createLog(
+      logId: logId,
+      medicineId: medicineId,
+      userId: userId,
+      scheduledTime: schedule,
+    );
+
+    Future.delayed(const Duration(minutes: 30), () async {
+      await MedicineLogService.instance.markMissed(logId);
+    });
+  }
+
+  Future<void> scheduleWeeklyMedicineReminder({
+    required String logId,
+    required String medicineId,
+    required String userId,
+    required int weekday,
+    required int hour,
+    required int minute,
+    required String title,
+    required String body,
+  }) async {
+    var schedule = _nextWeekly(weekday, hour, minute);
+
+    await plugin.zonedSchedule(
+      logId.hashCode,
+      title,
+      body,
+      schedule,
+      _details('weekly', 'Weekly', 'Weekly medicine reminders'),
+      payload: logId,
+      matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+    );
+
+    await MedicineLogService.instance.createLog(
+      logId: logId,
+      medicineId: medicineId,
+      userId: userId,
+      scheduledTime: schedule,
+    );
+
+    Future.delayed(const Duration(minutes: 30), () async {
+      await MedicineLogService.instance.markMissed(logId);
+    });
+  }
+
+  Future<void> scheduleMonthlyMedicineReminder({
+    required String logId,
+    required String medicineId,
+    required String userId,
+    required int weekday,
+    required int hour,
+    required int minute,
+    required int weekOfMonth,
+    required String title,
+    required String body,
+  }) async {
+    var schedule = _nextMonthly(weekday, hour, minute, weekOfMonth);
+
+    await plugin.zonedSchedule(
+      logId.hashCode,
+      title,
+      body,
+      schedule,
+      _details('monthly', 'Monthly', 'Monthly medicine reminders'),
+      payload: logId,
+      matchDateTimeComponents: DateTimeComponents.dayOfMonthAndTime,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+    );
+
+    await MedicineLogService.instance.createLog(
+      logId: logId,
+      medicineId: medicineId,
+      userId: userId,
+      scheduledTime: schedule,
+    );
+
+    Future.delayed(const Duration(minutes: 30), () async {
+      await MedicineLogService.instance.markMissed(logId);
+    });
+  }
+
+  /// -------------------
+  /// HELPERS
+  /// -------------------
+
+  tz.TZDateTime _nextDaily(int hour, int minute) {
+    final now = tz.TZDateTime.now(tz.local);
+    var schedule = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+    if (schedule.isBefore(now)) schedule = schedule.add(const Duration(days: 1));
+    return schedule;
+  }
+
+  tz.TZDateTime _nextWeekly(int weekday, int hour, int minute) {
+    final now = tz.TZDateTime.now(tz.local);
+    var schedule = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+    while (schedule.weekday != weekday) schedule = schedule.add(const Duration(days: 1));
+    if (schedule.isBefore(now)) schedule = schedule.add(const Duration(days: 7));
+    return schedule;
+  }
+
+  tz.TZDateTime _nextMonthly(int weekday, int hour, int minute, int weekOfMonth) {
+    final now = tz.TZDateTime.now(tz.local);
+    var schedule = tz.TZDateTime(tz.local, now.year, now.month, 1, hour, minute);
+    int count = 0;
+    while (true) {
+      if (schedule.weekday == weekday) {
+        count++;
+        if (count == weekOfMonth) break;
+      }
+      schedule = schedule.add(const Duration(days: 1));
+    }
+
+    if (schedule.isBefore(now)) {
+      schedule = tz.TZDateTime(tz.local, now.year, now.month + 1, 1, hour, minute);
+      int count2 = 0;
+      while (true) {
+        if (schedule.weekday == weekday) {
+          count2++;
+          if (count2 == weekOfMonth) break;
+        }
+        schedule = schedule.add(const Duration(days: 1));
+      }
+    }
+
+    return schedule;
+  }
+
   Future<void> cancel(int id) async => plugin.cancel(id);
   Future<void> cancelAll() async => plugin.cancelAll();
+
+  /// -------------------
+/// DEBUG TEST NOTIFICATIONS
+/// -------------------
+Future<void> showTestNotification(String title, String body) async {
+  await plugin.show(
+    DateTime.now().millisecondsSinceEpoch ~/ 1000, // unique id
+    title,
+    body,
+    _details('test', 'Test Notifications', 'Debugging test notifications'),
+  );
+}
+
 }

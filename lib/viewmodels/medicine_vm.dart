@@ -1,15 +1,17 @@
-// viewmodels/medicine_vm.dart
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:android_intent_plus/android_intent.dart';
 import 'package:uuid/uuid.dart';
 import 'package:timezone/timezone.dart' as tz;
+
 import '../core/notification_service.dart';
 import '../models/medicine_model.dart';
 import '../repositories/medicine_repository.dart';
+import '../core/exact_alarm_permission_helper.dart';
 
 class MedicineViewModel extends ChangeNotifier {
   final _repo = MedicineRepository();
+  // ✅ Request Exact Alarm permission first
+
+
 
   Stream<List<Medicine>> streamMedicines(String userId) => _repo.getMedicines(userId);
 
@@ -25,68 +27,88 @@ class MedicineViewModel extends ChangeNotifier {
     int? weekOfMonth,
     DateTime? monthlyDate,
   }) async {
-    /*// Request exact alarm intent on Android when needed (helper or settings typically handles this)
-    if (Platform.isAndroid) {
-      final intent = AndroidIntent(action: 'android.settings.REQUEST_SCHEDULE_EXACT_ALARM');
-      try {
-        await intent.launch();
-      } catch (_) {}
-    }
-    */
-
     final id = const Uuid().v4();
-    final notificationId = id.hashCode;
 
-    final medicine = Medicine(id: id, userId: userId, name: name, dosage: dosage, hour: hour, minute: minute);
+    final medicine = Medicine(
+      id: id,
+      userId: userId,
+      name: name,
+      dosage: dosage,
+      hour: hour,
+      minute: minute,
+    );
+
     await _repo.addMedicine(medicine);
+
+
+    // New logId for tracking the dose
+    final logId = DateTime.now().millisecondsSinceEpoch.toString();
+    await ExactAlarmPermissionHelper.checkAndRequest(context);
+
 
     switch (repeat) {
       case 'weekly':
         if (weekday != null) {
-          await NotificationService.instance.scheduleWeekly(
-            id: notificationId,
-            title: 'Medicine: $name',
-            body: dosage,
+          await NotificationService.instance.scheduleWeeklyMedicineReminder(
+            logId: logId,
+            medicineId: id,
+            userId: userId,
             weekday: weekday,
             hour: hour,
             minute: minute,
+            title: "Take $name",
+            body: dosage,
           );
         }
         break;
 
       case 'monthly':
         if (monthlyDate != null) {
-          var schedule = tz.TZDateTime(tz.local, monthlyDate.year, monthlyDate.month, monthlyDate.day, hour, minute);
+          tz.TZDateTime schedule = tz.TZDateTime(
+            tz.local,
+            monthlyDate.year,
+            monthlyDate.month,
+            monthlyDate.day,
+            hour,
+            minute,
+          );
+
           if (schedule.isBefore(tz.TZDateTime.now(tz.local))) {
-            schedule = tz.TZDateTime(tz.local, monthlyDate.year, monthlyDate.month + 1, monthlyDate.day, hour, minute);
+            final nextMonth = monthlyDate.month < 12 ? monthlyDate.month + 1 : 1;
+            final nextYear = monthlyDate.month < 12 ? monthlyDate.year : monthlyDate.year + 1;
+            schedule = tz.TZDateTime(
+              tz.local,
+              nextYear,
+              nextMonth,
+              monthlyDate.day,
+              hour,
+              minute,
+            );
           }
-          await NotificationService.instance.scheduleOneTime(
-            id: notificationId,
-            title: 'Medicine: $name',
-            body: dosage,
-            dateTime: schedule,
-          );
-        } else if (weekday != null && weekOfMonth != null) {
-          await NotificationService.instance.scheduleMonthly(
-            id: notificationId,
-            title: 'Medicine: $name',
-            body: dosage,
-            weekday: weekday,
-            hour: hour,
-            minute: minute,
-            weekOfMonth: weekOfMonth,
-          );
+
+          await NotificationService.instance.scheduleMonthlyMedicineReminder(
+  logId: logId,
+  medicineId: id,
+  userId: userId,
+  weekday: schedule.weekday,
+  weekOfMonth: ((schedule.day - 1) ~/ 7) + 1,
+  hour: hour,
+  minute: minute,
+  title: "Take $name",
+  body: dosage,
+);
         }
         break;
 
-      case 'daily':
-      default:
-        await NotificationService.instance.scheduleDaily(
-          id: notificationId,
-          title: 'Medicine: $name',
-          body: dosage,
+      default: // daily
+        await NotificationService.instance.scheduleDailyMedicineReminder(
+          logId: logId,
+          medicineId: id,
+          userId: userId,
           hour: hour,
           minute: minute,
+          title: "Take $name",
+          body: dosage,
         );
         break;
     }
