@@ -99,7 +99,7 @@ class _WelcomePageState extends State<WelcomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text("Today's Medicine Progress ($percent%)",
+            Text("Today's Progress ($percent%)",
                 style: AppTextStyles.subtitle),
             const SizedBox(height: 8),
 
