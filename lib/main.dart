@@ -5,6 +5,7 @@ import 'core/app_router.dart';
 import 'core/app_initializer.dart';
 import 'core/notification_service.dart';
 import 'styles/app_theme.dart';
+import 'core/medicine_log_service.dart'; // ✅ ADD THIS
 
 // ViewModels
 import 'viewmodels/auth_vm.dart';
@@ -20,6 +21,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppInitializer.initialize();
   await NotificationService.instance.init();
+ 
 
   runApp(
     MultiProvider(

@@ -5,8 +5,9 @@ import '../viewmodels/reminders_vm.dart';
 import '../viewmodels/auth_vm.dart';
 import '../models/reminder_model.dart';
 import '../styles/app_text.dart';
+import '../styles/app_colors.dart';
 import '../widgets/common_navbar.dart';
-import 'calendar_page.dart'; // ✅ Import the calendar page
+import 'calendar_page.dart';
 
 class ReminderPage extends StatefulWidget {
   const ReminderPage({super.key});
@@ -18,12 +19,10 @@ class ReminderPage extends StatefulWidget {
 class _ReminderPageState extends State<ReminderPage> {
   final titleCtrl = TextEditingController();
   final descCtrl = TextEditingController();
-
   TimeOfDay time = TimeOfDay.now();
   String repeat = 'daily';
   int? weekday;
   DateTime? monthlyDate;
-
   Stream<List<Reminder>>? _remindersStream;
 
   @override
@@ -61,7 +60,7 @@ class _ReminderPageState extends State<ReminderPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Reminders')),
       body: uid == null
-          ? const Center(child: Text('Sign in to manage reminders'))
+          ? const Center(child: Text('Sign in to manage reminders', style: AppTextStyles.body))
           : Padding(
               padding: const EdgeInsets.all(12.0),
               child: Column(
@@ -77,7 +76,7 @@ class _ReminderPageState extends State<ReminderPage> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Text('Time: ${time.format(context)}'),
+                      Text('Time: ${time.format(context)}', style: AppTextStyles.body),
                       const SizedBox(width: 8),
                       ElevatedButton(
                         onPressed: _pickTime,
@@ -103,9 +102,7 @@ class _ReminderPageState extends State<ReminderPage> {
                         7,
                         (i) => DropdownMenuItem(
                           value: i + 1,
-                          child: Text(
-                            ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i],
-                          ),
+                          child: Text(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i]),
                         ),
                       ),
                       onChanged: (v) => setState(() => weekday = v),
@@ -121,40 +118,29 @@ class _ReminderPageState extends State<ReminderPage> {
                     ),
                   const SizedBox(height: 8),
 
-                  /// ✅ Row with Add Reminder + Calendar Buttons
                   Row(
                     children: [
                       Expanded(
                         child: ElevatedButton.icon(
                           onPressed: () async {
-                            if (titleCtrl.text.isEmpty ||
-                                descCtrl.text.isEmpty) {
+                            if (titleCtrl.text.isEmpty || descCtrl.text.isEmpty) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Please enter title and description.'),
-                                ),
+                                const SnackBar(content: Text('Please enter title and description.')),
                               );
                               return;
                             }
-
                             if (repeat == 'weekly' && weekday == null) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Please select a weekday for weekly reminders.'),
-                                ),
+                                const SnackBar(content: Text('Please select a weekday for weekly reminders.')),
                               );
                               return;
                             }
-
                             if (repeat == 'monthly' && monthlyDate == null) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Please pick a date for monthly reminders.'),
-                                ),
+                                const SnackBar(content: Text('Please pick a date for monthly reminders.')),
                               );
                               return;
                             }
-
                             await vm.addReminder(
                               context: context,
                               userId: uid!,
@@ -173,11 +159,7 @@ class _ReminderPageState extends State<ReminderPage> {
                             weekday = null;
 
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  '✅ Reminder saved & notification scheduled!',
-                                ),
-                              ),
+                              const SnackBar(content: Text('✅ Reminder saved & notification scheduled!')),
                             );
                           },
                           icon: const Icon(Icons.add),
@@ -190,22 +172,19 @@ class _ReminderPageState extends State<ReminderPage> {
                           onPressed: () {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(
-                                builder: (context) => const CalendarPage(),
-                              ),
+                              MaterialPageRoute(builder: (_) => const CalendarPage()),
                             );
                           },
                           icon: const Icon(Icons.calendar_today),
                           label: const Text('Calendar'),
                           style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Color(0xFFADD8E6)),
-                            backgroundColor: const Color(0xFFADD8E6)
+                            foregroundColor: AppColors.primary,
+                            side: BorderSide(color: AppColors.primary),
                           ),
                         ),
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 12),
                   const Text('Your Reminders', style: AppTextStyles.heading2),
                   const SizedBox(height: 8),
@@ -215,24 +194,18 @@ class _ReminderPageState extends State<ReminderPage> {
                         : StreamBuilder<List<Reminder>>(
                             stream: _remindersStream,
                             builder: (context, snap) {
-                              if (!snap.hasData) {
-                                return const Center(child: CircularProgressIndicator());
-                              }
+                              if (!snap.hasData) return const Center(child: CircularProgressIndicator());
                               final reminders = snap.data!;
-                              if (reminders.isEmpty) {
-                                return const Center(child: Text('No reminders'));
-                              }
+                              if (reminders.isEmpty) return const Center(child: Text('No reminders', style: AppTextStyles.body));
                               return ListView.builder(
                                 itemCount: reminders.length,
                                 itemBuilder: (ctx, i) {
                                   final r = reminders[i];
                                   return ListTile(
-                                    title: Text(r.title),
-                                    subtitle: Text(
-                                      '${r.description} — ${r.hour.toString().padLeft(2, '0')}:${r.minute.toString().padLeft(2, '0')}',
-                                    ),
+                                    title: Text(r.title, style: AppTextStyles.heading2),
+                                    subtitle: Text('${r.description} — ${r.hour.toString().padLeft(2, '0')}:${r.minute.toString().padLeft(2, '0')}', style: AppTextStyles.body),
                                     trailing: IconButton(
-                                      icon: const Icon(Icons.delete),
+                                      icon: const Icon(Icons.delete, color: AppColors.danger),
                                       onPressed: () => vm.deleteReminder(r),
                                     ),
                                   );

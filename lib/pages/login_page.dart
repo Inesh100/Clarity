@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/auth_vm.dart';
 import '../styles/app_text.dart';
+import '../styles/app_colors.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -13,8 +14,8 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final emailCtrl = TextEditingController();
   final passCtrl = TextEditingController();
-  bool _obscurePassword = true; 
-  bool _rememberMe = true; // default to true
+  bool _obscurePassword = true;
+  bool _rememberMe = true;
 
   @override
   void initState() {
@@ -31,6 +32,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     final vm = Provider.of<AuthViewModel>(context);
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Login')),
@@ -39,15 +41,23 @@ class _LoginPageState extends State<LoginPage> {
         child: Column(
           children: [
             const SizedBox(height: 12),
-            Text('Welcome back', style: AppTextStyles.heading1),
+            Text('Welcome back',
+                style: AppTextStyles.heading1.copyWith(
+                    color: theme.colorScheme.onBackground)),
             const SizedBox(height: 12),
 
+            // Email Field
             TextField(
               controller: emailCtrl,
-              style: const TextStyle(fontSize: 16), 
-              decoration: const InputDecoration(
-                labelText: 'Email', 
-                labelStyle: TextStyle(fontSize: 16),
+              style: AppTextStyles.body.copyWith(
+                  color: theme.colorScheme.onBackground),
+              decoration: InputDecoration(
+                labelText: 'Email',
+                labelStyle: AppTextStyles.body.copyWith(
+                    color: theme.colorScheme.primary),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
             const SizedBox(height: 8),
@@ -56,13 +66,21 @@ class _LoginPageState extends State<LoginPage> {
             TextField(
               controller: passCtrl,
               obscureText: _obscurePassword,
-              style: const TextStyle(fontSize: 16),
+              style: AppTextStyles.body.copyWith(
+                  color: theme.colorScheme.onBackground),
               decoration: InputDecoration(
                 labelText: 'Password',
-                labelStyle: const TextStyle(fontSize: 16),
+                labelStyle: AppTextStyles.body.copyWith(
+                    color: theme.colorScheme.primary),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 suffixIcon: IconButton(
                   icon: Icon(
-                    _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                    _obscurePassword
+                        ? Icons.visibility_off
+                        : Icons.visibility,
+                    color: theme.colorScheme.primary,
                   ),
                   onPressed: () {
                     setState(() {
@@ -74,7 +92,7 @@ class _LoginPageState extends State<LoginPage> {
             ),
             const SizedBox(height: 8),
 
-            // ✅ Remember Me checkbox
+            // Remember Me Checkbox
             Row(
               children: [
                 Checkbox(
@@ -84,14 +102,27 @@ class _LoginPageState extends State<LoginPage> {
                       _rememberMe = val ?? true;
                     });
                   },
+                  activeColor: theme.colorScheme.primary,
                 ),
-                const Text("Remember Me"),
+                Text(
+                  "Remember Me",
+                  style: AppTextStyles.body
+                      .copyWith(color: theme.colorScheme.onBackground),
+                ),
               ],
             ),
             const SizedBox(height: 8),
 
             // Sign-In button
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: theme.colorScheme.onPrimary,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
               onPressed: () async {
                 await vm.signIn(emailCtrl.text.trim(), passCtrl.text);
                 if (!mounted) return;
@@ -102,7 +133,8 @@ class _LoginPageState extends State<LoginPage> {
                   } else {
                     await vm.clearLastEmail();
                   }
-                  Navigator.pushNamedAndRemoveUntil(context, '/welcome', (_) => false);
+                  Navigator.pushNamedAndRemoveUntil(
+                      context, '/welcome', (_) => false);
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text(vm.error ?? 'Login failed')),
@@ -115,6 +147,14 @@ class _LoginPageState extends State<LoginPage> {
 
             // Google Sign-In button
             ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.secondary,
+                foregroundColor: theme.colorScheme.onSecondary,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
               icon: const Icon(Icons.login),
               label: const Text('Sign In with Google'),
               onPressed: () async {
@@ -127,7 +167,8 @@ class _LoginPageState extends State<LoginPage> {
                   } else {
                     await vm.clearLastEmail();
                   }
-                  Navigator.pushNamedAndRemoveUntil(context, '/welcome', (_) => false);
+                  Navigator.pushNamedAndRemoveUntil(
+                      context, '/welcome', (_) => false);
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text(vm.error ?? 'Google sign-in failed')),
@@ -140,9 +181,10 @@ class _LoginPageState extends State<LoginPage> {
 
             TextButton(
               onPressed: () => Navigator.pushNamed(context, '/signup'),
-              child: const Text(
-                'Create account', 
-                style: TextStyle(fontSize: 18),
+              child: Text(
+                'Create account',
+                style: AppTextStyles.body.copyWith(
+                    color: theme.colorScheme.primary, fontSize: 18),
               ),
             ),
           ],

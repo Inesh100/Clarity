@@ -1,10 +1,10 @@
-// lib/pages/profile_page.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/profile_vm.dart';
 import '../viewmodels/auth_vm.dart';
 import '../widgets/common_navbar.dart';
 import '../styles/app_text.dart';
+import '../styles/app_colors.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -15,7 +15,6 @@ class ProfilePage extends StatelessWidget {
     final profileVm = context.watch<ProfileViewModel>();
     final user = profileVm.user ?? authVm.appUser;
 
-    // Load profile if not loaded
     if (authVm.firebaseUser != null && profileVm.user == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         profileVm.loadProfile(authVm.firebaseUser!.uid);
@@ -36,18 +35,18 @@ class ProfilePage extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           CircleAvatar(
-                            radius: MediaQuery.of(context).size.width * 0.25,
+                            radius: 60,
+                            backgroundColor: AppColors.secondary,
                             child: Text(
                               user.name.isNotEmpty ? user.name[0].toUpperCase() : 'U',
-                              style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
+                              style: AppTextStyles.heading1.copyWith(fontSize: 48),
                             ),
                           ),
                           const SizedBox(height: 24),
                           Text(user.name, style: AppTextStyles.heading2),
                           Text(user.email, style: AppTextStyles.body),
                           const SizedBox(height: 32),
-                          
-                          // Edit Profile
+
                           ElevatedButton.icon(
                             onPressed: () {
                               Navigator.pushNamed(context, '/profile/edit');
@@ -57,8 +56,10 @@ class ProfilePage extends StatelessWidget {
                           ),
                           const SizedBox(height: 24),
 
-                          // Sign Out
                           ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.danger
+                            ),
                             onPressed: () async {
                               profileVm.clearProfile();
                               await authVm.signOut();
@@ -69,13 +70,15 @@ class ProfilePage extends StatelessWidget {
                             icon: const Icon(Icons.logout),
                             label: const Text('Sign Out'),
                           ),
+
+                          const SizedBox(height: 16),
                           ElevatedButton.icon(
                             onPressed: () {
-                                Navigator.pushNamed(context, '/settings');
+                              Navigator.pushNamed(context, '/settings');
                             },
-                           icon: const Icon(Icons.settings),
-                          label: const Text('Settings'),
-                        ),
+                            icon: const Icon(Icons.settings),
+                            label: const Text('Settings'),
+                          ),
                         ],
                       ),
                     ),

@@ -3,6 +3,8 @@ import '../models/medicine_log_model.dart';
 import '../viewmodels/medicine_log_vm.dart';
 import '../repositories/medicine_repository.dart';
 import 'package:table_calendar/table_calendar.dart';
+import '../styles/app_colors.dart';
+import '../styles/app_text.dart';
 
 class MedicineLogPage extends StatefulWidget {
   final String userId;
@@ -14,14 +16,19 @@ class MedicineLogPage extends StatefulWidget {
 
 class _MedicineLogPageState extends State<MedicineLogPage> {
   final _vm = MedicineLogViewModel();
-  final _medRepo = MedicineRepository(); // ✅ instance
+  final _medRepo = MedicineRepository();
   DateTime _focusedDay = DateTime.now();
   DateTime _selectedDay = DateTime.now();
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      appBar: AppBar(title: const Text("Medicine History")),
+      appBar: AppBar(
+        title: const Text("Medicine History"),
+        backgroundColor: theme.primaryColor,
+      ),
       body: Column(
         children: [
           TableCalendar(
@@ -35,22 +42,32 @@ class _MedicineLogPageState extends State<MedicineLogPage> {
                 _focusedDay = focused;
               });
             },
-            calendarStyle: const CalendarStyle(
+            calendarStyle: CalendarStyle(
               todayDecoration: BoxDecoration(
-                color: Colors.blue,
+                color: theme.colorScheme.primary,
                 shape: BoxShape.circle,
               ),
               selectedDecoration: BoxDecoration(
-                color: Colors.green,
+                color: theme.colorScheme.secondary,
                 shape: BoxShape.circle,
               ),
+              todayTextStyle:
+                  TextStyle(color: theme.colorScheme.onPrimary),
+              selectedTextStyle:
+                  TextStyle(color: theme.colorScheme.onSecondary),
+            ),
+            headerStyle: HeaderStyle(
+              titleTextStyle:
+                  AppTextStyles.heading2.copyWith(color: theme.colorScheme.onBackground),
+              formatButtonVisible: false,
             ),
           ),
 
           const SizedBox(height: 10),
-          const Text(
+          Text(
             "Daily Logs",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: AppTextStyles.heading2.copyWith(
+                color: theme.colorScheme.onBackground),
           ),
 
           Expanded(
@@ -61,14 +78,21 @@ class _MedicineLogPageState extends State<MedicineLogPage> {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                final logs = snapshot.data!.where((log) =>
-                    log.scheduledTime.year == _selectedDay.year &&
-                    log.scheduledTime.month == _selectedDay.month &&
-                    log.scheduledTime.day == _selectedDay.day
-                ).toList();
+                final logs = snapshot.data!
+                    .where((log) =>
+                        log.scheduledTime.year == _selectedDay.year &&
+                        log.scheduledTime.month == _selectedDay.month &&
+                        log.scheduledTime.day == _selectedDay.day)
+                    .toList();
 
                 if (logs.isEmpty) {
-                  return const Center(child: Text("No logs for this day"));
+                  return Center(
+                    child: Text(
+                      "No logs for this day",
+                      style: AppTextStyles.body.copyWith(
+                          color: theme.colorScheme.onBackground),
+                    ),
+                  );
                 }
 
                 return ListView.builder(
@@ -94,17 +118,20 @@ class _MedicineLogPageState extends State<MedicineLogPage> {
                     }
 
                     return Card(
+                      color: theme.cardColor,
                       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       child: ListTile(
                         leading: Icon(icon, color: color, size: 32),
 
-                        // ✅ Use instance method to get medicine name
                         title: FutureBuilder<String>(
                           future: _medRepo.getMedicineName(log.medicineId),
                           builder: (_, snap) {
                             return Text(
                               snap.data ?? "Loading...",
-                              style: const TextStyle(fontWeight: FontWeight.w600),
+                              style: AppTextStyles.body.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: theme.colorScheme.onBackground,
+                              ),
                             );
                           },
                         ),
@@ -113,9 +140,11 @@ class _MedicineLogPageState extends State<MedicineLogPage> {
                           "Scheduled: "
                           "${log.scheduledTime.hour.toString().padLeft(2, '0')}:"
                           "${log.scheduledTime.minute.toString().padLeft(2, '0')}",
+                          style: AppTextStyles.body.copyWith(
+                              color: theme.colorScheme.onBackground),
                         ),
 
-                        trailing: _buildActionButtons(log),
+                        trailing: _buildActionButtons(log, theme),
                       ),
                     );
                   },
@@ -128,11 +157,11 @@ class _MedicineLogPageState extends State<MedicineLogPage> {
     );
   }
 
-  Widget _buildActionButtons(MedicineLog log) {
+  Widget _buildActionButtons(MedicineLog log, ThemeData theme) {
     if (log.status != "pending") {
       return Text(
         log.status == "taken" ? "✅ Taken" : "❌ Missed",
-        style: TextStyle(
+        style: AppTextStyles.body.copyWith(
           color: log.status == "taken" ? Colors.green : Colors.red,
           fontWeight: FontWeight.bold,
         ),
@@ -143,12 +172,12 @@ class _MedicineLogPageState extends State<MedicineLogPage> {
       mainAxisSize: MainAxisSize.min,
       children: [
         IconButton(
-          icon: const Icon(Icons.check, color: Colors.green),
+          icon: Icon(Icons.check, color: Colors.green),
           tooltip: "Mark Taken",
           onPressed: () => _vm.markTaken(log.id),
         ),
         IconButton(
-          icon: const Icon(Icons.close, color: Colors.red),
+          icon: Icon(Icons.close, color: Colors.red),
           tooltip: "Mark Missed",
           onPressed: () => _vm.markMissed(log.id),
         ),

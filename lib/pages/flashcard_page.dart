@@ -4,6 +4,8 @@ import '../viewmodels/flashcard_vm.dart';
 import '../viewmodels/auth_vm.dart';
 import '../models/flashcard_model.dart';
 import '../widgets/common_navbar.dart';
+import '../styles/app_text.dart';
+import '../styles/app_colors.dart';
 
 class FlashcardPage extends StatefulWidget {
   const FlashcardPage({super.key});
@@ -22,11 +24,12 @@ class _FlashcardPageState extends State<FlashcardPage> {
     final authVm = Provider.of<AuthViewModel>(context);
     final vm = Provider.of<FlashcardViewModel>(context);
     final uid = authVm.firebaseUser?.uid;
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Flashcards')),
       body: uid == null
-          ? const Center(child: Text('Sign in to access flashcards'))
+          ? Center(child: Text('Sign in to access flashcards', style: AppTextStyles.body))
           : Padding(
               padding: const EdgeInsets.all(12.0),
               child: Column(
@@ -34,17 +37,25 @@ class _FlashcardPageState extends State<FlashcardPage> {
                   // Input area for new flashcard
                   TextField(
                     controller: questionCtrl,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Question',
-                      border: OutlineInputBorder(),
+                      labelStyle: AppTextStyles.body,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.primary),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: answerCtrl,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Answer',
-                      border: OutlineInputBorder(),
+                      labelStyle: AppTextStyles.body,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.primary),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -56,11 +67,12 @@ class _FlashcardPageState extends State<FlashcardPage> {
                       answerCtrl.clear();
                     },
                     icon: const Icon(Icons.add),
-                    label: const Text('Add Flashcard'),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                      textStyle: const TextStyle(fontSize: 16),
+                      backgroundColor: AppColors.primary,
+                      textStyle: AppTextStyles.buttonText,
                     ),
+                    label: const Text('Add Flashcard'),
                   ),
                   const SizedBox(height: 12),
 
@@ -71,7 +83,7 @@ class _FlashcardPageState extends State<FlashcardPage> {
                       builder: (context, snap) {
                         if (!snap.hasData) return const Center(child: CircularProgressIndicator());
                         final cards = snap.data!;
-                        if (cards.isEmpty) return const Center(child: Text('No flashcards'));
+                        if (cards.isEmpty) return Center(child: Text('No flashcards', style: AppTextStyles.body));
 
                         return ListView.builder(
                           itemCount: cards.length,
@@ -85,6 +97,7 @@ class _FlashcardPageState extends State<FlashcardPage> {
                                   borderRadius: BorderRadius.circular(16),
                                 ),
                                 elevation: 4,
+                                color: theme.cardColor,
                                 child: Padding(
                                   padding: const EdgeInsets.all(16.0),
                                   child: Column(
@@ -92,17 +105,14 @@ class _FlashcardPageState extends State<FlashcardPage> {
                                     children: [
                                       Text(
                                         c.question,
-                                        style: const TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                        style: AppTextStyles.heading2,
                                       ),
                                       const SizedBox(height: 12),
                                       AnimatedCrossFade(
                                         firstChild: const SizedBox.shrink(),
                                         secondChild: Text(
                                           c.answer,
-                                          style: const TextStyle(fontSize: 18, color: Colors.blueGrey),
+                                          style: AppTextStyles.body.copyWith(color: AppColors.secondary),
                                         ),
                                         crossFadeState: showAnswer
                                             ? CrossFadeState.showSecond
@@ -113,7 +123,7 @@ class _FlashcardPageState extends State<FlashcardPage> {
                                       Align(
                                         alignment: Alignment.bottomRight,
                                         child: IconButton(
-                                          icon: const Icon(Icons.delete),
+                                          icon: const Icon(Icons.delete, color: AppColors.danger),
                                           onPressed: () => vm.deleteCard(c.id),
                                         ),
                                       )

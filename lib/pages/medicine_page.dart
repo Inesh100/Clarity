@@ -1,4 +1,3 @@
-// pages/medicine_page.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -6,6 +5,7 @@ import '../viewmodels/medicine_vm.dart';
 import '../viewmodels/auth_vm.dart';
 import '../models/medicine_model.dart';
 import '../styles/app_text.dart';
+import '../styles/app_colors.dart';
 import '../widgets/common_navbar.dart';
 
 class MedicinePage extends StatefulWidget {
@@ -56,33 +56,45 @@ class _MedicinePageState extends State<MedicinePage> {
   @override
   Widget build(BuildContext context) {
     final vm = Provider.of<MedicineViewModel>(context);
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Medicine Schedule')),
       body: uid == null
-          ? const Center(child: Text('Sign in to manage medicines'))
+          ? Center(
+              child: Text('Sign in to manage medicines', style: AppTextStyles.body),
+            )
           : Padding(
               padding: const EdgeInsets.all(12.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Medicine name & dosage
                   TextField(
                     controller: nameCtrl,
-                    decoration: const InputDecoration(labelText: 'Medicine name'),
+                    decoration: InputDecoration(
+                      labelText: 'Medicine name',
+                      labelStyle: AppTextStyles.body,
+                    ),
                   ),
                   TextField(
                     controller: dosageCtrl,
-                    decoration: const InputDecoration(labelText: 'Dosage info'),
+                    decoration: InputDecoration(
+                      labelText: 'Dosage info',
+                      labelStyle: AppTextStyles.body,
+                    ),
                   ),
                   const SizedBox(height: 8),
 
                   // Time picker
                   Row(
                     children: [
-                      Text('Time: ${time.format(context)}'),
+                      Text('Time: ${time.format(context)}', style: AppTextStyles.body),
                       const SizedBox(width: 8),
-                      ElevatedButton(onPressed: _pickTime, child: const Text('Pick time')),
+                      ElevatedButton(
+                        onPressed: _pickTime,
+                        style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                        child: const Text('Pick time', style: AppTextStyles.buttonText),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -90,6 +102,7 @@ class _MedicinePageState extends State<MedicinePage> {
                   // Repeat dropdown
                   DropdownButtonFormField<String>(
                     value: repeat,
+                    decoration: const InputDecoration(),
                     items: const [
                       DropdownMenuItem(value: 'daily', child: Text('Daily')),
                       DropdownMenuItem(value: 'weekly', child: Text('Weekly')),
@@ -99,28 +112,30 @@ class _MedicinePageState extends State<MedicinePage> {
                   ),
                   const SizedBox(height: 8),
 
-                  // Weekday dropdown for weekly/monthly
                   if (repeat == 'weekly')
-  DropdownButton<int>(
-    value: weekday ?? DateTime.now().weekday,
-    items: List.generate(
-      7,
-      (i) => DropdownMenuItem(
-        value: i + 1,
-        child: Text(['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i]),
-      ),
-    ),
-    onChanged: (v) => setState(() => weekday = v),
-  ),
+                    DropdownButton<int>(
+                      value: weekday ?? DateTime.now().weekday,
+                      items: List.generate(
+                        7,
+                        (i) => DropdownMenuItem(
+                          value: i + 1,
+                          child: Text(['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i]),
+                        ),
+                      ),
+                      onChanged: (v) => setState(() => weekday = v),
+                    ),
 
-// Monthly date picker only
-if (repeat == 'monthly')
-  ElevatedButton(
-    onPressed: _pickMonthlyDate,
-    child: Text(monthlyDate == null
-        ? 'Pick a date'
-        : DateFormat('dd/MM/yyyy').format(monthlyDate!)),
-  ),
+                  if (repeat == 'monthly')
+                    ElevatedButton(
+                      onPressed: _pickMonthlyDate,
+                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                      child: Text(
+                        monthlyDate == null
+                            ? 'Pick a date'
+                            : DateFormat('dd/MM/yyyy').format(monthlyDate!),
+                        style: AppTextStyles.buttonText,
+                      ),
+                    ),
 
                   const SizedBox(height: 8),
 
@@ -169,10 +184,11 @@ if (repeat == 'monthly')
                         const SnackBar(content: Text('✅ Medicine saved & notification scheduled!')),
                       );
                     },
-                    child: const Text('Add medicine'),
+                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                    child: const Text('Add medicine', style: AppTextStyles.buttonText),
                   ),
                   const SizedBox(height: 12),
-                  const Text('Your Medicines', style: AppTextStyles.heading2),
+                  Text('Your Medicines', style: AppTextStyles.heading2),
                   const SizedBox(height: 8),
 
                   // Medicine list
@@ -184,17 +200,18 @@ if (repeat == 'monthly')
                             builder: (context, snap) {
                               if (!snap.hasData) return const Center(child: CircularProgressIndicator());
                               final meds = snap.data!;
-                              if (meds.isEmpty) return const Center(child: Text('No medicines'));
+                              if (meds.isEmpty) return const Center(child: Text('No medicines', style: AppTextStyles.body));
                               return ListView.builder(
                                 itemCount: meds.length,
                                 itemBuilder: (ctx, i) {
                                   final m = meds[i];
                                   return ListTile(
-                                    title: Text(m.name),
+                                    title: Text(m.name, style: AppTextStyles.body),
                                     subtitle: Text(
-                                        '${m.dosage} — ${m.hour.toString().padLeft(2,'0')}:${m.minute.toString().padLeft(2,'0')}'),
+                                        '${m.dosage} — ${m.hour.toString().padLeft(2,'0')}:${m.minute.toString().padLeft(2,'0')}',
+                                        style: AppTextStyles.small),
                                     trailing: IconButton(
-                                      icon: const Icon(Icons.delete),
+                                      icon: const Icon(Icons.delete, color: AppColors.danger),
                                       onPressed: () => vm.deleteMedicine(m),
                                     ),
                                   );

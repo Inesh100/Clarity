@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/auth_vm.dart';
 import '../styles/app_text.dart';
+import '../styles/app_colors.dart';
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -26,6 +27,7 @@ class _SignupPageState extends State<SignupPage> {
           children: [
             const SizedBox(height: 12),
             Text('Create account', style: AppTextStyles.heading1),
+            const SizedBox(height: 12),
             TextField(
               controller: nameCtrl,
               decoration: const InputDecoration(labelText: 'Full name'),
@@ -39,28 +41,28 @@ class _SignupPageState extends State<SignupPage> {
               obscureText: true,
               decoration: const InputDecoration(labelText: 'Password'),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 20),
             ElevatedButton(
-  onPressed: () async {
-    final success = await vm.signUp(
-      emailCtrl.text.trim(),
-      passCtrl.text,
-      nameCtrl.text.trim(),
-    );
+              onPressed: () async {
+                final success = await vm.signUp(
+                  emailCtrl.text.trim(),
+                  passCtrl.text,
+                  nameCtrl.text.trim(),
+                );
 
-    if (!mounted) return;
+                if (!mounted) return;
 
-    if (success) {
-      Navigator.pop(context); // back to login
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(vm.error ?? 'Signup failed')),
-      );
-    }
-  },
-  child: const Text('Register'),
-),
-
+                if (success) {
+                  Navigator.pop(context); // back to login
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(vm.error ?? 'Signup failed')),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+              child: const Text('Register', style: AppTextStyles.buttonText),
+            ),
           ],
         ),
       ),

@@ -1,7 +1,8 @@
-// lib/pages/motivation_timer_page.dart
 import 'package:flutter/material.dart';
 import '../data/quotes.dart';
 import '../widgets/timer_widget.dart';
+import '../styles/app_text.dart';
+import '../styles/app_colors.dart';
 
 class MotivationTimerPage extends StatefulWidget {
   const MotivationTimerPage({Key? key}) : super(key: key);
@@ -48,11 +49,7 @@ class _MotivationTimerPageState extends State<MotivationTimerPage> {
                   child: Text(
                     currentQuote,
                     key: ValueKey(currentQuote),
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontStyle: FontStyle.italic,
-                      height: 1.4,
-                    ),
+                    style: AppTextStyles.heading2.copyWith(fontStyle: FontStyle.italic, height: 1.4, color: AppColors.textSecondary),
                     textAlign: TextAlign.center,
                   ),
                 ),
